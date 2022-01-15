@@ -1,0 +1,203 @@
+---
+title: "cleaning for template data"
+author: "Sascha Siegmund"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "nb_figs/clean_",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+
+## purpose of notebook
+
+  - [ ] initial look at data to get a basic understanding and gather todos -> df_raw
+  - [ ] tidy up and cleaning of data set -> df
+  - [ ] all processing of the data set happens here and is saved to pre-/processed csv-> df
+ 
+
+## observations
+
+  - 
+               
+
+## load packages
+
+```{r load packages, setup, message=FALSE}
+library(tidyverse) # tidy data frame
+library(lubridate) # functions to work with date-times and time-spans
+library(janitor) # expedite the initial data exploration and cleaning that comes with any new data set
+library(plotly)
+
+library(readxl) # read_excel to read xslx dataset
+```
+
+
+## import data
+
+```{r}
+df_raw <- read_csv('../data/house_prices_regression/train.csv')
+df <- df_raw
+```
+
+
+## first look at data
+
+```{r}
+head(df_raw, 25)
+```
+```{r}
+tail(df_raw)
+```
+```{r}
+summary(df_raw)
+```
+
+
+## missing values
+
+-  
+
+```{r fig.height=20, fig.width=14}
+#create data frame with information on whether the value in each cell is zero
+tmp_df <- df_raw == 0
+missing_by_column <- tmp_df %>%
+  as_tibble %>% # convert to data frame
+  mutate(row_number = 1:nrow(.)) %>% # add a column with the row number
+  gather(variable, is_missing, -row_number) # turn wide data into narrow data
+
+# plot the missing values in our data frame
+ggplot(missing_by_column, aes(x = variable, y = row_number, fill =  is_missing)) +
+  geom_tile() +
+  theme_minimal() +
+  scale_fill_grey(name = "",
+                  labels = c("present", "is zero", "is NA")) +
+  theme(axis.text.x = element_text(angle=45, vjust=0.7, size=10)) +
+  scale_y_reverse() +
+  labs(x = "variables in dataset",
+       y = "rows / observations")
+```
+
+
+## duplicated rows
+
+- 
+
+```{r fig.height=14, fig.width=10}
+df_raw %>% get_dupes() # examine duplicate rows
+
+# get row number of duplicated rows
+tmp_df <- distinct(df_raw)
+duplicated_rows <- as_tibble(rownames(df_raw)) %>% 
+  mutate(duplicated = value %in% setdiff(rownames(df_raw), rownames(tmp_df))) %>% 
+  mutate(value = as.numeric(value))
+
+# plot duplicated rows as black lines
+ggplot(duplicated_rows, aes(y = value, x = 1, fill = duplicated)) +
+  geom_tile() + # plot a black line for each constant column
+  ggtitle("row index of duplicated rows") + # add title
+  theme_minimal() +
+  scale_fill_grey(start=0.8, end=0.2,
+                  name = "",
+                  labels = c("ok", "duplicated")) +
+  scale_y_reverse() +
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
+  labs(y = "row index",
+       x = "")
+```
+
+
+## constant columns
+
+- 
+
+```{r fig.width=14}
+# get column name of constant columns
+tmp_df <- remove_constant(df_raw, na.rm = TRUE)
+constant_columns <- as_tibble(names(df_raw)) %>% 
+  mutate(constant = value %in% setdiff(names(df_raw), names(tmp_df)))
+
+# plot duplicated rows as black lines
+ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
+  geom_tile() + # plot a black line for each constant column
+  ggtitle("names of constant columns") + # add title
+  coord_flip() + # flip x and y axis
+  scale_x_reverse() + # reverse x axis
+  theme_minimal() +
+  scale_fill_grey(start=0.8, end=0.2,
+                  name = "",
+                  labels = c("ok", "constant")) +
+  theme(axis.text.x = element_text(angle=45, vjust=0.7, size=10),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(y = "variables in dataset",
+       x = "")
+```
+
+
+## cleaning
+
+- 
+
+```{r}
+# df <- df %>%
+#   clean_names() %>%  # clean column names
+#   distinct() %>%  # remove duplicated rows
+#   remove_empty() %>%  # removes empty rows and columns
+#   remove_constant(na.rm = TRUE) %>%  # removes constsant columns
+#   mutate(VarFactor = factor(VarFactor)) %>%  # categorical col as factor
+#   mutate(VarDate = as.Date(VarDate, "%d-%m-%Y")) %>%  # convert chr to date 
+```
+
+
+## remove anomalies
+
+- 
+
+```{r}
+# df <- df %>% 
+#   filter(!((VarCategorical == 'Cat1')|
+#            (VarCategorical == 'Cat2')|
+#            (VarCategorical == 'Cat3'))) %>%  # remove specific categories
+#   filter(!(VarNumerical > 120000)) # remove outlying values
+```
+
+
+## additional variables
+
+- 
+
+```{r}
+# new variable: sum of all VarWithPattern*
+# df <- df %>%
+#   rowwise %>%
+#   mutate(AcceptedCmpAll = sum(c_across(contains("VarWithPattern"))))
+
+```
+
+
+```{r}
+# check results from cleaning and added variables
+head(df)
+```
+```{r}
+summary(df)
+```
+
+
+## save processed data
+
+```{r}
+# df %>% write_csv(file = '../data/marketing_campaign_clean.csv')
+```
+

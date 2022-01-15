@@ -1,0 +1,459 @@
+---
+title: "discover cluster in customer personality analysis data"
+author: "Sascha Siegmund"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "nb_figs/clus_",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+
+## purpose of notebook
+
+  - [ ] 
+  
+## insights 
+
+  - 
+
+
+## load packages
+
+```{r, setup, include=FALSE}
+library(tidyverse) # tidy data frame
+library(ggthemes) # for extra plot themes
+library(plotly) # make ggplots interactive
+
+library(factoextra) # provides some easy-to-use functions to extract and visualize the output of multivariate data analyses
+
+# individual libraries are in the according cell
+```
+
+
+## import data
+
+```{r, message=FALSE}
+df <- read_csv('../data/heart_attack_classification/heart.csv')
+```
+
+
+## overview
+
+```{r}
+head(df)
+```
+```{r}
+summary(df)
+```
+
+
+## prepare data
+
+```{r}
+# remove variables which are highly correlated or dichtome or not wanted in analysis
+value_df <- df %>% select(everything()) %>% 
+  na.omit()
+
+# list with categorical columns to exclude
+cat = c('Education', 'Marital_Status')
+
+# replace data with scaled columns
+ # scale_df <- as_tibble(scale(df[, !names(df) %in% cat]))
+preObj <- caret::preProcess(value_df[, !names(value_df) %in% cat], method=c("center", "scale"))
+scale_df <- predict(preObj, value_df[, !names(value_df) %in% cat])
+head(scale_df)
+
+# find more methods here: https://stackoverflow.com/questions/15215457/standardize-data-columns-in-r
+```
+
+
+## config
+
+```{r}
+no_k = 2 # number of clusters for clustering methods 
+max_k = 7 # maximum clusters in scope 
+min_k = 2 # minimum clusters in scope
+```
+
+
+## clValid to choose best clustering algo
+
+https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92
+The cValid package can be used to simultaneously compare multiple clustering algorithms, to identify the best clustering approach and the optimal number of clusters. We will compare k-means, hierarchical and PAM clustering.
+Connectivity and Silhouette are both measurements of connectedness while the Dunn Index is the ratio of the smallest distance between observations not in the same cluster to the largest intra-cluster distance.
+
+```{r}
+tmp_df <- scale_df %>% as.matrix()
+
+library(clValid) # Statistical and biological validation of clustering results
+library(mclust) # BIC for parameterized Gaussian mixture models fitted by EM algorithm 
+
+intern <- clValid(tmp_df, nClust = min_k:max_k, 
+                  clMethods = c("hierarchical", "kmeans", "diana", "fanny", "som", 
+                                "model", "sota", "pam", "clara", "agnes"),
+                  validation = "internal", maxitems=nrow(scale_df))
+
+summary(intern)
+```
+
+
+## Clustree
+
+https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92
+In this figure the size of each node corresponds to the number of samples in each cluster, and the arrows are colored according to the number of samples each cluster receives. A separate set of arrows, the transparent ones, called the incoming node proportion, are also colored and shows how samples from one group end up in another group — an indicator of cluster instability.
+
+```{r, fig.width = 15, fig.height = 9}
+tmp_df <- scale_df
+
+library(clustree) # produce clustering trees, a visualization to interrogate clusterings as resolution increase
+
+tmp <- NULL
+for (k in 1:max_k){
+  tmp[k] <- kmeans(tmp_df, k, nstart = 30)
+}
+
+tmp_df <- data.frame(tmp)
+colnames(tmp_df) <- seq(1:max_k) # add prefix to the column names
+colnames(tmp_df) <- paste0("k", colnames(tmp_df)) 
+
+# get individual PCA
+tmp_df.pca <- prcomp(tmp_df, center = TRUE, scale. = FALSE)
+
+ind.coord <- tmp_df.pca$x
+ind.coord <- ind.coord[,1:2]
+
+tmp_df <- bind_cols(as.data.frame(tmp_df), as.data.frame(ind.coord))
+
+clustree(tmp_df, prefix = "k") # produce clustering trees, a visualization for interrogating clustering 
+
+overlay_list <- clustree_overlay(tmp_df, prefix = "k", x_value = "PC1", y_value = "PC2", plot_sides = TRUE)
+overlay_list$overlay
+overlay_list$x_side
+overlay_list$y_side
+```
+
+
+## hierarchical clustering
+
+https://statsandr.com/blog/clustering-analysis-k-means-and-hierarchical-clustering-by-hand-and-in-r/#optimal-number-of-clusters
+remind that the difference with the partition by k-means is that for hierarchical clustering, the number of classes is not specified in advance
+
+```{r}
+tmp_df <- scale_df
+
+# Hierarchical clustering: single linkage
+hclust_res <- hclust(dist(tmp_df), method = 'single')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) # can take some time for big data sets
+ 
+# Hierarchical clustering: complete linkage
+hclust_res <- hclust(dist(tmp_df), method = 'complete')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
+
+# Hierarchical clustering: average linkage
+hclust_res <- hclust(dist(tmp_df), method = 'average')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
+
+# Hierarchical clustering: ward
+hclust_res <- hclust(dist(tmp_df), method = 'ward.D2')
+# plot(hclust_res)
+# rect.hclust(hclust_res, k = no_k, border = 'blue')
+fviz_dend(hclust_res, k = no_k, rect = TRUE)
+
+# Hierarchical clustering: mcquitty
+hclust_res <- hclust(dist(tmp_df), method = 'mcquitty')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
+
+# Hierarchical clustering: centroid
+hclust_res <- hclust(dist(tmp_df), method = 'centroid')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
+```
+
+
+## k-means clustering
+
+https://statsandr.com/blog/clustering-analysis-k-means-and-hierarchical-clustering-by-hand-and-in-r/#optimal-number-of-clusters
+As a reminder, this method aims at partitioning n observations into k clusters in which each observation belongs to the cluster with the closest average, serving as a prototype of the cluster
+
+```{r}
+tmp_df <- scale_df
+
+library(NbClust) # determining the optimal number of clusters in a data set
+library(cluster) # computes agglomerative hierarchical clustering of the dataset
+
+# k-means clustering via the kmeans(), centers corresponds to the number of desired clusters
+kmeans_model <- kmeans(tmp_df, centers = no_k, nstart = 30) 
+# store cluster in original data set as column
+df_cluster <- tibble(value_df, cluster = as.factor(kmeans_model$cluster)) 
+df_cluster
+
+# check quality of a k-means partition
+quality <- kmeans_model$betweenss / kmeans_model$totss 
+print(paste("quality of kmeans is BSS/TSS: ", format(round(quality,2), nsmall = 2)))
+
+# find optimal number of clusters
+fviz_nbclust(tmp_df, kmeans, method = 'wss') + # Elbow method
+  # geom_vline(xintercept = 2, linetype = 2) + # add line for better visualization
+  labs(subtitle = "Elbow method") # add subtitle
+
+fviz_nbclust(tmp_df, kmeans, method = 'silhouette') + # Silhouette method
+  labs(subtitle = "Silhouette method") # add subtitle
+
+fviz_nbclust(tmp_df, kmeans, # Gap statistics
+             nstart = 30,
+             method = 'gap_stat',
+             nboot = 100) + # reduce it for lower computation time, but less precise results
+  labs(subtitle = "Gap statistics method")
+
+nbclust_out <- NbClust(data = tmp_df, # NbClust
+                       distance = 'euclidean',
+                       min.nc = min_k, # minimum number of clusters
+                       max.nc = max_k, # maximum number of cluster
+                       method = 'complete',
+                       index = 'all')
+fviz_nbclust(nbclust_out) + theme_minimal() +
+  labs(subtitle = "NbClust results")
+
+# check quality of clustering
+#  if a large majority of the silhouette coefficients are positive, 
+#  it indicates that the observations are placed in the correct group
+sil <- silhouette(kmeans_model$cluster, dist(tmp_df)) 
+fviz_silhouette(sil)
+
+fviz_cluster(kmeans_model, tmp_df, ellipse.type = 'norm') + theme_minimal()
+fviz_cluster(kmeans_model, tmp_df) + theme_minimal()
+```
+
+```{r}
+tmp_df <- scale_df
+
+kmean_calc <- function(df, ...){
+  kmeans(df, scaled = ..., nstart = 30)
+}
+
+km2 <- kmean_calc(tmp_df, 2)
+km3 <- kmean_calc(tmp_df, 3)
+km4 <- kmeans(tmp_df, 4)
+km5 <- kmeans(tmp_df, 5)
+km6 <- kmeans(tmp_df, 6)
+km7 <- kmeans(tmp_df, 7)
+
+p1 <- fviz_cluster(km2, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p1 <- ggplotly(p1) %>% layout(annotations = list(text = "k = 2", xref = "paper", yref = "paper", 
+                                                 yanchor = "bottom", xanchor = "center", 
+                                                 align = "center", x = 0.5, y = 1, showarrow = FALSE))
+p2 <- fviz_cluster(km3, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p2 <- ggplotly(p2) %>% layout(annotations = list(text = "k = 3", xref = "paper", yref = "paper", 
+                                                 yanchor = "bottom", xanchor = "center", 
+                                                 align = "center", x = 0.5, y = 1, showarrow = FALSE))
+p3 <- fviz_cluster(km4, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p3 <- ggplotly(p3) %>% layout(annotations = list(text = "k = 4", xref = "paper", yref = "paper", 
+                                                 yanchor = "bottom", xanchor = "center", 
+                                                 align = "center", x = 0.5, y = 1, showarrow = FALSE))
+p4 <- fviz_cluster(km5, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p4 <- ggplotly(p4) %>% layout(annotations = list(text = "k = 5", xref = "paper", yref = "paper", 
+                                                 yanchor = "bottom", xanchor = "center", 
+                                                 align = "center", x = 0.5, y = 1, showarrow = FALSE))
+p5 <- fviz_cluster(km6, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p5 <- ggplotly(p5) %>% layout(annotations = list(text = "k = 6", xref = "paper", yref = "paper", 
+                                                 yanchor = "bottom", xanchor = "center", 
+                                                 align = "center", x = 0.5, y = 1, showarrow = FALSE))
+p6 <- fviz_cluster(km7, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p6 <- ggplotly(p6) %>% layout(annotations = list(text = "k = 7", xref = "paper", yref = "paper", 
+                                                 yanchor = "bottom", xanchor = "center", 
+                                                 align = "center", x = 0.5, y = 1, showarrow = FALSE))
+# TOOD: make all plots linked
+fig <- subplot(p1, p2, p3 , p4, p5, p6, nrows = 2, shareX = TRUE, shareY = TRUE) %>% layout() 
+fig
+```
+
+
+## principal component analysis colored by self organizing map cluster
+
+I need more knowledge how to work with and interpret SOM and PCA, maybe also not enough observations in data set
+https://iamciera.github.io/SOMexample/html/SOM_RNAseq_tutorial_part2a_SOM.html
+
+```{r}
+tmp_df <- scale_df
+
+library(kohonen) # functions to train self-organising maps (SOMs)
+
+# principle component analysis
+pca <- prcomp(tmp_df, scale=FALSE)
+summary(pca)
+
+# visualize pcs results
+# Contributions of variables to PC1
+fviz_contrib(pca, choice = "var", axes = 1, top = 10)
+# Contributions of variables to PC2
+fviz_contrib(pca, choice = "var", axes = 2, top = 10)
+# Control variable colors using their contributions to the principle axis
+fviz_pca_var(pca, col.var="contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping
+             ) + theme_minimal() + ggtitle("Variables - PCA")
+
+# add back to original so everything is together
+pca_scores <- data.frame(pca$x)
+data_val <- cbind(value_df, pca_scores)
+
+# clustering is performed using the som() function on the scaled gene expression values.
+set.seed(3)
+
+# define a grid for the SOM and train
+grid_size <- ncol(tmp_df)
+som_grid <- somgrid(xdim = grid_size, ydim = grid_size, topo = 'hexagonal')
+som_model <- som(as.matrix(tmp_df), grid = som_grid)
+summary(som_model)
+
+# generate som plots after training
+plot(som_model, type = 'mapping')
+plot(som_model, type = 'codes')
+# plot(som_model, type = 'counts')
+# plot(som_model, type = 'dist.neighbours')
+# plot(som_model, type = 'quality')
+# plot(som_model, type = 'changes')
+
+# further split the clusters into a smaller set of clusters using hierarchical clustering.
+# use hierarchical clustering to cluster the codebook vectors
+som_cluster <- cutree(hclust(dist(som_model$codes[[1]])), no_k) 
+
+plot(som_model, type="mapping", bgcol = som_cluster, main = "Clusters")
+add.cluster.boundaries(som_model, som_cluster)
+
+# attach the hierchal cluster to the larger dataset data_val.
+gridSquare <- grid_size * grid_size
+som_clusterKey <- data.frame(som_cluster)
+som_clusterKey$unit_classif <- c(1:gridSquare)
+data_val <- cbind(data_val,som_model$unit.classif,som_model$distances) %>% 
+  rename(unit_classif = 'som_model$unit.classif', distances = 'som_model$distances')
+data_val <- merge(data_val, som_clusterKey, by.x = "unit_classif" )
+head(data_val)
+
+# plot pca with colored clusters
+pcasom_plot <- ggplot(data_val, aes(x = PC1, y = PC2, color = factor(som_cluster))) +
+    geom_rug(alpha = 0.5) + 
+    geom_point(alpha = 0.75) + 
+    theme_minimal()
+pcasom_plot <- ggplotly(pcasom_plot) %>% layout()
+
+pcasom_plot
+```
+
+
+## Extracting Features of Clusters
+
+https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92
+Ultimately, we would like to answer questions like “what is it that makes this cluster unique from others?” and “what are the clusters that are similar to one another”. Let’s select some clusters and interrogate the features of these clusters.
+
+```{r}
+tmp_df <- scale_df
+
+# compute dissimilarity matrix with euclidean distances
+d <- dist(tmp_df, method = 'euclidean')
+
+# hierarchical clustering using Ward's method
+res_hc <- hclust(d, method = 'ward.D2')
+
+# cut tree into 3 groups
+grp <- cutree(res_hc, k = no_k)
+
+# visualize
+plot(res_hc, cex = 0.6) # plot tree
+rect.hclust(res_hc, k = no_k, border = 2:5) # add rectangles
+
+# execution of k-means with k = 4
+final <- kmeans(tmp_df, no_k, nstart = 30)
+
+fviz_cluster(final, data = tmp_df) + theme_minimal() + ggtitle("k = 4")
+```
+
+```{r}
+as.tibble(scale_df) %>% 
+  mutate(cluster = final$cluster) %>%
+  group_by(cluster) %>%
+  summarise_all('mean')
+
+as.tibble(value_df) %>% 
+  mutate(cluster = final$cluster) %>%
+  group_by(cluster) %>%
+  summarise_all('mean')
+
+as.tibble(value_df) %>% 
+  mutate(cluster = final$cluster) %>%
+  group_by(cluster) %>%
+  summarise_all('median')
+```
+```{r}
+tmp_df <- as_tibble(scale_df) %>% rownames_to_column()
+cluster_pos <- as_tibble(final$cluster) %>% rownames_to_column()
+colnames(cluster_pos) <- c("rowname", "cluster")
+final <- inner_join(cluster_pos, tmp_df, by = "rowname")
+
+
+library(ggiraphExtra) # for exploratory plots, see https://rpubs.com/cardiomoon/231820
+
+radar <- ggRadar(final[-1], aes(group = cluster), rescale = FALSE,
+        legend.position = "none", size = 1, interactive = FALSE, use.label = TRUE) +
+  # facet_wrap(~cluster) +
+  scale_y_discrete(breaks = NULL) + # don't show ticks
+  theme_minimal()
+
+radar
+```
+
+```{r message=FALSE}
+tmp_df <- as_tibble(scale_df)
+tmp_df$cluster <- as.factor(final$cluster)
+
+library(GGally) # extends ggplot2 by adding several functions to reduce the complexity
+
+ggpairs(tmp_df, 1:ncol(tmp_df), mapping = ggplot2::aes(color = cluster, alpha = 0.5),
+        diag = list(continuous = wrap("densityDiag")),
+        lower = list(continuous = wrap("points", alpha = 0.6)),
+        progress = FALSE) +
+  theme_minimal()
+```
+
+```{r}
+tmp_df <- as_tibble(scale_df)
+tmp_df$cluster <- as.factor(final$cluster)
+
+library(GGally) # extends ggplot2 by adding several functions to reduce the complexity 
+
+# https://www.r-graph-gallery.com/parallel-plot-ggally.html#custom
+parcoord_plot <- ggparcoord(tmp_df,
+           columns = 1:ncol(scale_df), groupColumn = ncol(tmp_df),
+           scale='center', # scaling: standardize and center variables
+           showPoints = FALSE,
+           alphaLines = 0.3) +
+  theme_minimal() 
+parcoord_plot <- ggplotly(parcoord_plot) %>% layout(autosize=T)
+
+parcoord_plot
+```
+
+
+## testing clusters
+
+
+

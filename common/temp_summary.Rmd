@@ -1,0 +1,87 @@
+---
+title: "summary for New York City Restaurant Inspection Results"
+author: "Sascha Siegmund"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "nb_figs/summary_",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+
+## purpose of notebook
+
+  - [ ] summarize all insights and ideas from the other notebooks, as well as good exploratory plots
+   
+   
+## information
+
+ - data found on: 
+   
+    
+## domain information 
+
+- 
+
+  
+## summary highlights
+  
+  - column information:  
+  
+  |  # | attribute | description & properties                                    | dependent? | remove? |
+  |:--:|:---------:|:-----------------------------------------------------------:|:----------:|:-------:|
+  | 1 |  |  |  |  |
+  | 2 |  |  |  |  | 
+  | 3 |  |  |  |  |
+  | 4 |  |  |  |  |
+
+
+## stories
+
+
+ 
+ 
+## load packages
+
+```{r load packages, setup, message=FALSE}
+library(tidyverse) # tidy data frame
+library(plotly) # make ggplots interactive
+```
+
+
+## import data
+
+```{r}
+# df <- read_csv(file = '../data/restaurants_data_processed.csv')
+```
+
+## overview
+
+```{r}
+head(df)
+```
+
+```{r}
+summary(df)
+```
+
+
+## observations from ... nb
+
+
+
+
+## insights from ... nb
+
+  
+
+

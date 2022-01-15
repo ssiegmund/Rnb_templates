@@ -1,0 +1,520 @@
+---
+title: "describe bivariate for template data"
+author: "Sascha Siegmund"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "nb_figs/multi_",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+
+## purpose of notebook
+
+  - [ ] describe & visualize relationship between variables (multivariate)
+  - [ ] gather interesting observations for further investigation
+  - [ ] gather possible new features for extraction
+  
+  
+## insights 
+
+  - 
+
+
+## load packages
+
+```{r load packages, setup, message=FALSE}
+library(tidyverse) # tidy data frame
+library(plotly) # make ggplots interactive
+library(ggmosaic) # for mosaic plots 
+```
+
+
+## import data
+
+```{r, message=FALSE}
+df <- read_csv('../data/heart_attack_classification/heart.csv') %>% mutate(trtbps_bin = cut_interval(trtbps, n = 15)) %>% mutate(chol_bin = cut_interval(chol, n = 15))
+```
+
+
+## overview
+
+```{r}
+head(df)
+```
+```{r}
+summary(df)
+```
+
+
+## scagnostics
+
+- 
+
+```{r}
+# Scagnostics (scatterplot diagnostics) summarize potentially interesting patterns in 2d scatterplots
+name = c('')
+tmp_df <- df %>% 
+  # select() %>%  # remove categorical and time
+  na.omit() 
+
+library(scagnostics)
+# scagnostics_results[,1]
+# scagnostics_results[1,]
+
+scagnostics_results <- scagnostics(tmp_df)
+head(scagnostics_results)
+
+e <- scagnosticsExemplars(scagnostics_results)
+o <- scagnosticsOutliers(scagnostics_results)
+g <- scagnosticsGrid(scagnostics_results)
+
+# look at outliers
+# o[o]
+# go <- g[o,]
+# par(mfrow = c(1,1))
+# plot(tmp_df[[go$x]], tmp_df[[go$y]], pch=19,
+#      xlab=names(tmp_df)[go$x], ylab=names(tmp_df)[go$y])
+
+# find and plot exemplars
+e[e]
+ge <- g[e,]
+par(mfrow = c(1,1))
+for(i in 1:dim(ge)[1])
+  plot(tmp_df[[ge$x[i]]], tmp_df[[ge$y[i]]], pch=19,
+       xlab=names(tmp_df)[ge$x[i]], ylab=names(tmp_df)[ge$y[i]])
+
+par(mfrow = c(2,2))
+for(i in 1:dim(g)[1])
+  plot(tmp_df[[g$x[i]]], tmp_df[[g$y[i]]], pch=19,
+       xlab=names(tmp_df)[g$x[i]], ylab=names(tmp_df)[g$y[i]])
+```
+
+
+## bivariate numeric over numeric
+
+- 
+
+```{r}
+# two variables, continuous x, continuous y, show trend and distribution
+name = c('trtbps', 'chol')
+tmp_df <- df %>% rename(x = name[1], y = name[2]) %>% select(x, y) %>% add_count(x, y)
+
+p1 <- tmp_df %>%
+  ggplot(aes(x = x, y = y)) +
+    geom_vline(aes(xintercept = quantile(tmp_df$x, na.rm = TRUE)[2]), color = 5, alpha = 0.25) + 
+    geom_vline(aes(xintercept = quantile(tmp_df$x, na.rm = TRUE)[4]), color = 5, alpha = 0.25) +
+    geom_hline(aes(yintercept = quantile(tmp_df$y, na.rm = TRUE)[2]), color = 5, alpha = 0.25) + 
+    geom_hline(aes(yintercept = quantile(tmp_df$y, na.rm = TRUE)[4]), color = 5, alpha = 0.25) +
+    geom_point(aes(size = n), alpha = 0.3, stat = "unique") + 
+    scale_size(range = c(1, max(tmp_df$n))) +
+    geom_density2d(alpha = 0.5, bins = 5, color = 'darkgreen') +
+    geom_quantile(alpha = 0.7, color = 'darkorange') +
+    geom_smooth() +
+    theme_minimal() +
+    ggtitle(paste("trend of", name[2], "over", name[1], sep=" "))
+p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
+
+p2 <- tmp_df %>%
+  ggplot(aes(x = x)) +
+    stat_density(geom="line") + 
+    theme_minimal()
+p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p3 <- tmp_df %>%
+  ggplot(aes(x = 1, y = x)) +
+    geom_boxplot() +
+    theme_minimal() +
+    coord_flip() 
+p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p4 <- tmp_df %>%
+  ggplot(aes(x = y)) +
+    stat_density(geom="line") + 
+    coord_flip() +
+    theme_minimal()
+p4 <- ggplotly(p4) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p5 <- tmp_df %>%
+  ggplot(aes(x = 1, y = y)) +
+    geom_boxplot() +
+    theme_minimal() 
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+# merge figures into one plot, via subplots, https://plotly-r.com/arranging-views.html
+fig <- subplot(p2, plotly_empty(), plotly_empty(),
+               p3, plotly_empty(), plotly_empty(),
+               p1, p5, p4, 
+               nrows = 3, margin = 0, heights = c(0.1, 0.035, 0.865), widths = c(0.92, 0.02, 0.06), 
+               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
+
+fig
+```
+
+
+## bivariate numeric over numeric, many observations
+
+- 
+
+```{r}
+# two variables, continuous x, continuous y, show trend and distribution
+name = c('trtbps', 'chol')
+tmp_df <- df %>% rename(x = name[1], y = name[2]) %>% select(x, y)
+
+p1 <- tmp_df %>%
+  ggplot(aes(x = x, y = y)) +
+    stat_density_2d(aes(fill = after_stat(density)), 
+                    geom = "raster", contour = FALSE, show.legend = FALSE) +
+    scale_fill_viridis_c() +
+    geom_quantile(alpha = 0.7, color = 'darkorange') +
+    geom_smooth() +
+    theme_minimal() +
+    ggtitle(paste("trend of", name[2], "over", name[1], sep=" "))
+p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
+
+p2 <- tmp_df %>%
+  ggplot(aes(x = x)) +
+    stat_density(geom="line") + 
+    theme_minimal()
+p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p3 <- tmp_df %>%
+  ggplot(aes(x = 1, y = x)) +
+    geom_boxplot() +
+    theme_minimal() +
+    coord_flip() 
+p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p4 <- tmp_df %>%
+  ggplot(aes(x = y)) +
+    stat_density(geom="line") + 
+    coord_flip() +
+    theme_minimal()
+p4 <- ggplotly(p4) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p5 <- tmp_df %>%
+  ggplot(aes(x = 1, y = y)) +
+    geom_boxplot() +
+    theme_minimal() 
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+# merge figures into one plot, via subplots, https://plotly-r.com/arranging-views.html
+fig <- subplot(p2, plotly_empty(), plotly_empty(),
+               p3, plotly_empty(), plotly_empty(),
+               p1, p5, p4, 
+               nrows = 3, margin = 0, heights = c(0.1, 0.035, 0.865), widths = c(0.92, 0.02, 0.06), 
+               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
+
+fig
+```
+
+
+## bivariate numeric over categorical
+
+- 
+
+```{r}
+# two variables, continuous/discrete y, categorical x, show trend and distribution
+name = c('sex', 'trtbps')
+tmp_df <- df %>% rename(c = name[1], y = name[2]) %>% select(c, y) %>% mutate(c = fct_infreq(factor(c))) %>% 
+  add_count(c, y)
+
+so.q2 <- function(y){ quantile(y, na.rm = TRUE)[2] }
+so.q4 <- function(y){ quantile(y, na.rm = TRUE)[4] }
+
+p1 <- tmp_df %>%
+  ggplot(aes(x = c, y = y)) +
+    geom_violin(aes(color = c), scale = "area", fill = NA) +
+    geom_boxplot(fill = NA, lwd = 0.4, outlier.alpha = 0.3, width =0.1) +
+    geom_hline(aes(yintercept = quantile(tmp_df$y, na.rm = TRUE)[2]), color = 'darkorange', alpha = 0.5, lty=2) + 
+    geom_hline(aes(yintercept = quantile(tmp_df$y, na.rm = TRUE)[3]), color = 'darkred', alpha = 0.5, lty=2) +
+    geom_hline(aes(yintercept = quantile(tmp_df$y, na.rm = TRUE)[4]), color = 'darkorange', alpha = 0.5, lty=2) +
+    stat_summary(aes(x = as.numeric(c)), fun = so.q2, geom = 'line', size = 0.5, color = 'darkorange') + 
+    stat_summary(aes(x = as.numeric(c)), fun = 'median', geom = 'line', size = 0.5, color = 'darkred') +
+    stat_summary(aes(x = as.numeric(c)), fun = so.q4, geom = 'line', size = 0.5, color = 'darkorange') + 
+    geom_spoke(aes(x = as.numeric(c), radius = n/max(tmp_df$n)/2, angle = 2*pi, color = c),
+               alpha = I(0.5), stat = "unique") + # x-offset= +n/2, radius= n, angle= pi for two-sided spoke plot
+    scale_color_brewer(guide = "none", palette = "Set2") +
+    coord_flip() +
+    theme_minimal() +
+    ggtitle(paste("distribution of", name[2], "grouped by", name[1], sep=" ")) 
+p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[2]), yaxis = list(title = name[1]))
+
+p2 <- tmp_df %>%
+  ggplot(aes(x = y)) +
+    stat_density(geom="line") + 
+    theme_minimal()
+p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p3 <- tmp_df %>%
+  ggplot(aes(x = 1, y = y)) +
+    geom_boxplot() +
+    theme_minimal() +
+    coord_flip() 
+p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p5 <- tmp_df %>%
+  ggplot() +
+    geom_mosaic(aes(x=product(c), fill = c)) +
+    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
+               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
+                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df),  accuracy = 1))),
+              size = 3.5) +
+    scale_fill_brewer(guide = "none", palette = "Set2") +
+    theme_minimal() +
+    coord_flip()
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+# merge figures into one plot, via subplots, https://plotly-r.com/arranging-views.html
+fig <- subplot(p2, plotly_empty(),
+               p3, plotly_empty(),
+               p1, p5,
+               nrows = 3, margin = 0, heights = c(0.07, 0.03, 0.9), widths = c(0.95, 0.05), 
+               shareX = TRUE, titleX = TRUE, titleY = TRUE) %>% layout() %>% hide_legend()
+
+fig
+```
+
+
+## bivarite categorical over categorical (mosaic plot)
+
+- 
+
+```{r}
+name = c('sex', 'output')
+tmp_df <- df %>% rename(c = name[1], d = name[2]) %>% select(c, d) %>% 
+  mutate(across(c(c,d), factor))
+
+chi <- chisq.test(xtabs(~c+d, data = tmp_df))
+# https://cran.r-project.org/web/packages/ggmosaic/vignettes/ggmosaic.html
+p1 <- tmp_df %>%
+  ggplot() +
+    geom_mosaic(aes(x=product(c, d), fill = c)) +
+    # conditioning: x=product(c), conds=product(d)
+    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
+               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
+                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df),  accuracy = 0.1))),
+              size = 3.5) +
+    scale_fill_brewer(guide = "none", palette = "Set2") +
+    theme_minimal() +
+    ggtitle(paste("distribution of", name[1], "over", name[2], sep=" ")) +
+    labs(subtitle = paste("Pearson's Chi-squared test:", round(chi[[1]],4)," p-value:", round(chi[[3]],4)))
+p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[2]), yaxis = list(title = name[1]),
+                              title = list(text = paste("distribution of", name[1], "over", name[2],
+                                             '<br>', '<sup>',
+                       "Pearson's Chi-squared test:", round(chi[[1]],4)," p-value:", round(chi[[3]],4),
+                                             '</sup>', sep=" ")))
+
+p3 <- tmp_df %>%
+  ggplot() +
+    geom_mosaic(aes(x=product(d))) +
+    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
+               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
+                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df),  accuracy = 1))),
+              size = 3.5) +
+    theme_minimal() 
+p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p5 <- tmp_df %>%
+  ggplot() +
+    geom_mosaic(aes(x=product(c))) +
+    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
+               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
+                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df),  accuracy = 1))),
+              size = 3.5) +
+    theme_minimal() +
+    coord_flip()
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+# merge figures into one plot, via subplots, https://plotly-r.com/arranging-views.html
+fig <- subplot(p3, plotly_empty(),
+               p1, p5, 
+               nrows = 2, margin = 0, heights = c(0.1, 0.9), widths = c(0.93, 0.07), 
+               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
+
+fig
+```
+
+
+## bivarite categorical over categorical (many categories, heatmap)
+
+- 
+
+```{r}
+name = c('trtbps_bin', 'chol_bin')
+tmp_df <- df %>% rename(c = name[1], d = name[2]) %>% select(c, d) %>% 
+  mutate(across(c(c,d), factor)) %>% count(c, d)
+
+p1 <- tmp_df %>% 
+  ggplot(aes(x = c, y = d, fill = n)) +
+    geom_tile() +
+    scale_fill_viridis_c(guide = "none") +
+    theme_minimal() +
+    ggtitle(paste("count of", name[2], "over", name[1], sep=" "))
+p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
+
+p2 <- tmp_df %>%
+  ggplot(aes(x = c, weight = n)) +
+    geom_bar() +
+    theme_minimal()
+p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p5 <- tmp_df %>%
+  ggplot(aes(x = d, weight = n)) +
+    geom_bar() +
+    theme_minimal() +
+    coord_flip()
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+fig <- subplot(p2, plotly_empty(),
+               p1, p5,
+               nrows = 2, margin = 0, heights = c(0.08, 0.92), widths = c(0.95, 0.05), 
+               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
+
+fig
+```
+
+
+## bivariate numeric over categorical (many categories, density heatmap)
+
+-
+
+```{r}
+name = c('trtbps', 'thall')
+tmp_df <- df %>% rename(x = name[1], c = name[2]) %>% select(x, c) %>% 
+  mutate(c = factor(c))
+
+p1 <- tmp_df %>% 
+  ggplot(aes(x = x, y = c, group = c, fill = after_stat(density))) +
+    geom_tile(stat = "density", show.legend = FALSE) +
+    scale_fill_viridis_c() +
+    theme_minimal() +
+    ggtitle(paste("distribution of", name[2], "over", name[1], sep=" "))
+p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
+
+p2 <- tmp_df %>%
+  ggplot(aes(x = x)) +
+    stat_density(geom="line") + 
+    theme_minimal()
+p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p3 <- tmp_df %>%
+  ggplot(aes(x = 1, y = x)) +
+    geom_boxplot() +
+    theme_minimal() +
+    coord_flip() 
+p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p5 <- tmp_df %>%
+  ggplot(aes(x = c)) +
+    geom_bar() +
+    theme_minimal() +
+    coord_flip()
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+fig <- subplot(p2, plotly_empty(),
+               p3, plotly_empty(),
+               p1, p5,
+               nrows = 3, margin = 0, heights = c(0.07, 0.03, 0.9), widths = c(0.95, 0.05), 
+               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
+
+fig
+```
+
+
+## bivariate parallel coordinate plot (max 1000 rows)
+
+- max 1000 rows, correlation 
+
+```{r}
+name = c('age', 'thalachh')
+tmp_df <- df %>% rename(x = name[1], y = name[2]) %>% select(x, y) %>% 
+  mutate(across(c(x,y), as.numeric)) %>% na.omit() %>% mutate(across(c(x,y), scale))
+
+# https://r-charts.com/ranking/parallel-coordinates-ggplot2/
+p1 <- GGally::ggparcoord(tmp_df,
+           columns = 1:ncol(tmp_df),
+           scale='globalminmax', # data already scaled
+           showPoints = FALSE,
+           splineFactor = TRUE, # drop if too many rows
+           alphaLines = 0.2) +
+    theme_minimal() +
+    ggtitle(paste("correlation of", name[1], "and", name[2], sep=" "))
+p1 <- ggplotly(p1) %>% layout(yaxis = list(title = ''), xaxis = list(title = '')) %>%
+  add_annotations(text = name[1], align = 'left', yref='paper', yref = 'paper', x = 1, y = 0, showarrow=FALSE) %>%
+  add_annotations(text = name[2], align = 'left', yref='paper', yref = 'paper', x = 2, y = 0, showarrow=FALSE)
+
+p2 <- tmp_df %>%
+  ggplot(aes(x = y)) +
+    stat_density(geom="line", trim = TRUE) + 
+    scale_x_continuous(limits = c(min(tmp_df$x, tmp_df$y), max(tmp_df$x, tmp_df$y))) +
+    coord_flip() +
+    theme_minimal()
+p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p3 <- tmp_df %>%
+  ggplot(aes(x = 1, y = y)) +
+    geom_boxplot() +
+    theme_minimal() 
+p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p4 <- tmp_df %>%
+  ggplot(aes(x = x)) +
+    stat_density(geom="line", trim = TRUE) + 
+    scale_x_continuous(limits = c(min(tmp_df$x, tmp_df$y), max(tmp_df$x, tmp_df$y))) +
+    coord_flip() +
+    theme_minimal()
+p4 <- ggplotly(p4) %>% layout(yaxis = list(showticklabels = TRUE, showgrid = TRUE, title = ''),
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = '', 
+                                           autorange = "reversed"))
+
+p5 <- tmp_df %>%
+  ggplot(aes(x = 1, y = x)) +
+    geom_boxplot() +
+    theme_minimal() 
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+# merge figures into one plot, via subplots, https://plotly-r.com/arranging-views.html
+fig <- subplot(p4, p5, p1, p3, p2,  
+               margin = 0, widths = c(0.05, 0.02, 0.86, 0.02, 0.05), 
+               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
+
+fig
+```
+
+
+
+
+
+
+

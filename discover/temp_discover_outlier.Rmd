@@ -1,0 +1,98 @@
+---
+title: "discover outliers for New York City Restaurant Inspection Results"
+author: "Sascha Siegmund"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "nb_figs/outlier_",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+## purpose of notebook
+
+  - [ ] 
+  
+  
+## insights 
+
+  - 
+
+
+## load packages
+
+```{r load packages, setup, message=FALSE}
+library(tidyverse) # tidy data frame
+library(plotly) # make ggplots interactive
+```
+
+
+## import data
+
+```{r, message=FALSE}
+df <- read_csv('../data/house_prices_regression/train.csv')
+```
+
+
+## overview
+
+```{r}
+head(df)
+```
+```{r}
+summary(df)
+```
+
+
+## HDoutliers
+
+
+```{r}
+name = c('')
+tmp_df <- df %>% select(MSSubClass, GarageArea, LotArea, SalePrice, GrLivArea) %>% na.omit()
+
+library(HDoutliers)
+
+outliers <- HDoutliers(tmp_df) # value = the indexes of the observations determined to be outliers
+head(outliers)
+plotHDoutliers(tmp_df, outliers) # If the data has more than two dimensions, it is plotted onto the principal components of the data that remains after removing outliers
+```
+
+
+
+## emstreeR 
+
+
+```{r}
+name = c('')
+tmp_df <- df %>% rename(x = LotArea, y = SalePrice) %>% select(x, y)
+
+library(emstreeR)
+
+emst <- ComputeMST(tmp_df, scale = FALSE)
+head(emst)
+
+fig <- emst %>% 
+  ggplot(aes(x = x, y = y, from = from, to = to)) +
+    geom_point(alpha = 0.5) +
+    stat_MST(color = 'red', linetype = 1, alpha = 0.5) +
+    theme_minimal()
+              
+ggplotly(fig)
+```
+
+
+
+
+
+
+
+
