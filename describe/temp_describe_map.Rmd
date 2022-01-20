@@ -1,0 +1,88 @@
+---
+title: "describe map for template data"
+author: "Sascha Siegmund"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "nb_figs/map_",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+
+## purpose of notebook
+
+  - [ ] describe & visualize map data
+  - [ ] gather interesting observations for further investigation
+  - [ ] gather possible new features for extraction
+  
+  
+## insights 
+
+  - 
+  
+
+## load packages
+
+```{r load packages, setup, message=FALSE}
+library(tidyverse) # tidy data frame
+library(plotly) # make ggplots interactive
+
+library(stars) # spatiotemporal data handling
+library(raster) # raster data handling
+library(terra) # raster data handling
+library(sf) # vector data handling
+library(ggspatial) # north arrow and scale bar
+```
+
+
+## import data
+
+```{r, message=FALSE}
+df <- read_csv('../data/us_accidents_geospatial/US_Accidents_Dec20_updated.csv') %>% sample_frac(0.01)
+```
+
+
+## overview
+
+```{r}
+head(df)
+```
+```{r}
+summary(df)
+```
+
+
+## map raster
+
+- 
+
+```{r}
+name = c('Start_Lng', 'Start_Lat')
+tmp_df <- df %>% rename(x = name[1], y = name[2]) %>% dplyr::select(x, y) %>% add_count(x, y)
+
+p1 <- tmp_df %>%
+  ggplot(aes(x = x, y = y, color = n)) +
+    geom_raster() +
+    scale_color_viridis_c() +
+    theme_void()  
+
+p1
+```
+
+
+
+
+
+
+
+
+

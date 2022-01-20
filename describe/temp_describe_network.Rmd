@@ -1,0 +1,77 @@
+---
+title: "describe network for template data"
+author: "Sascha Siegmund"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "nb_figs/net_",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+
+## purpose of notebook
+
+  - [ ] describe & visualize network data
+  - [ ] gather interesting observations for further investigation
+  - [ ] gather possible new features for extraction
+  
+  
+## insights 
+
+  - 
+  
+
+## load packages
+
+```{r load packages, setup, message=FALSE}
+library(tidyverse) # tidy data frame
+library(plotly) # make ggplots interactive
+library(tidygraph) # tidy data frames describing node and edge data respectively
+```
+
+
+## import data
+
+```{r, message=FALSE}
+network <- read_csv('../data/marvel_universe_network/hero-network.csv')
+edges <- read_csv('../data/marvel_universe_network/edges.csv')
+nodes <- read_csv('../data/marvel_universe_network/nodes.csv')
+```
+
+
+## overview
+
+```{r}
+head(df)
+```
+```{r}
+summary(df)
+```
+
+
+## overview ?
+
+- 
+
+```{r fig.height=20, fig.width=10}
+
+```
+
+
+
+
+
+
+
+
+
+

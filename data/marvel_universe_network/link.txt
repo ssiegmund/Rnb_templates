@@ -1,0 +1,34 @@
+https://www.kaggle.com/csanhueza/the-marvel-universe-social-network
+
+About this dataset
+
+The Marvel Universe
+
+Marvel Comics, originally called Timely Comics Inc., has been publishing comic books for several decades. 
+"The Golden Age of Comics" name that was given due to the popularity of the books during the first years, 
+was later followed by a period of decline of interest in superhero stories due to World War ref. In 1961, 
+Marvel relaunched its superhero comic books publishing line. This new era started what has been known as 
+the Marvel Age of Comics. Characters created during this period such as Spider-Man, the Hulk, the Fantastic 
+Four, and the X-Men, together with those created during the Golden Age such as Captain America, are known 
+worldwide and have become cultural icons during the last decades. Later, Marvel's characters popularity 
+has been revitalized even more due to the release of several recent movies which recreate the comic books 
+using spectacular modern special effects. Nowadays, it is possible to access the content of the comic books 
+via a digital platform created by Marvel, where it is possible to subscribe monthly or yearly to get access 
+to the comics. More information about the Marvel Universe can be found here.
+
+Content
+
+The dataset contains heroes and comics, and the relationship between them. The dataset is divided into three files:
+
+    nodes.csv: Contains two columns (node, type), indicating the name and the type (comic, hero) of the nodes.
+    edges.csv: Contains two columns (hero, comic), indicating in which comics the heroes appear.
+    hero-edge.csv: Contains the network of heroes which appear together in the comics. 
+    This file was originally taken from http://syntagmatic.github.io/exposedata/marvel/
+
+Past Research (Acknowledgements)
+
+The Marvel Comics character collaboration graph was originally constructed by Cesc Rosselló, Ricardo Alberich, 
+and Joe Miro from the University of the Balearic Islands. They compare the characteristics of this universe to 
+real-world collaboration networks, such as the Hollywood network, or the one created by scientists who work 
+together in producing research papers. Their original sources can be found here. With this dataset, the authors 
+published the paper titled: "Marvel Universe looks almost like a real social network".

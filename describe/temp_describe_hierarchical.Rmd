@@ -1,0 +1,70 @@
+---
+title: "describe hierarchical for template data"
+author: "Sascha Siegmund"
+date: "`r Sys.Date()`"
+output: 
+  github_document:
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  fig.path = "nb_figs/hier_",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+
+## purpose of notebook
+
+  - [ ] describe & visualize hierarchical variables
+  - [ ] gather interesting observations for further investigation
+  - [ ] gather possible new features for extraction
+  
+  
+## insights 
+
+  - 
+  
+
+## load packages
+
+```{r load packages, setup, message=FALSE}
+library(tidyverse) # tidy data frame
+library(plotly) # make ggplots interactive
+```
+
+
+## import data
+
+```{r, message=FALSE}
+df <- read_csv('../data/us_accidents_geospatial/US_Accidents_Dec20_updated.csv') # City,County,State,Country,Timezone
+```
+
+
+## overview
+
+```{r}
+head(df)
+```
+```{r}
+summary(df)
+```
+
+
+## overview ?
+
+- 
+
+```{r fig.height=20, fig.width=10}
+
+```
+
+
+
+
+
+
