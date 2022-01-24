@@ -1,5 +1,5 @@
 ---
-title: "discover outliers for New York City Restaurant Inspection Results"
+title: "discover outlier for template data"
 author: "Sascha Siegmund"
 date: "`r Sys.Date()`"
 output: 
@@ -17,10 +17,10 @@ knitr::opts_chunk$set(
 ```
 
 
+
 ## purpose of notebook
 
   - [ ] 
-  
   
 ## insights 
 
@@ -89,6 +89,37 @@ fig <- emst %>%
 ggplotly(fig)
 ```
 
+
+
+## outlier validation
+
+- take appropriate viz from notebook describe_group and describe_one, describe_two
+
+```{r}
+name = c('')
+tmp_df <- df %>% select(MSSubClass, GarageArea, LotArea, SalePrice, GrLivArea) %>%
+  select_if(is.numeric) %>% na.omit()
+
+
+outlier <- outliers::scores(tmp_df)
+outlier <- outlier > 3 | outlier < -3 # more than 3 std away from mean is outlier
+outlier <- outlier %>% as_tibble %>% mutate(outlier = rowMeans(.) > 0.2) # mark outliers for multiple columns
+tmp_df <- bind_cols(tmp_df, outlier = outlier$outlier) %>% mutate(outlier = as.factor(outlier))
+
+# https://r-charts.com/ranking/parallel-coordinates-ggplot2/
+parcoord_plot <- GGally::ggparcoord(tmp_df,
+           columns = 1:(ncol(tmp_df)-1), groupColumn = ncol(tmp_df),
+           scale='center', # scaling: standardize and center variables
+           showPoints = FALSE,
+           # order = 'Outlying', # Ordering methods
+           title = name,
+           alphaLines = 0.1) +
+      scale_color_manual(values = c("black", "red")) +
+      theme_minimal() 
+parcoord_plot <- ggplotly(parcoord_plot) %>% layout(autosize=T)
+
+parcoord_plot
+```
 
 
 

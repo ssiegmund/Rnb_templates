@@ -1,7 +1,7 @@
-discover cluster in customer personality analysis data
+discover cluster for template data
 ================
 Sascha Siegmund
-2022-01-15
+2022-01-24
 
 ## purpose of notebook
 
@@ -69,6 +69,14 @@ summary(df)
     ##  3rd Qu.:3.000   3rd Qu.:1.0000  
     ##  Max.   :3.000   Max.   :1.0000
 
+## config: set number of cluster
+
+``` r
+no_k = 2 # number of clusters for clustering methods 
+max_k = 7 # maximum clusters in scope 
+min_k = 2 # minimum clusters in scope
+```
+
 ## prepare data
 
 ``` r
@@ -76,13 +84,13 @@ summary(df)
 value_df <- df %>% select(everything()) %>% 
   na.omit()
 
-# list with categorical columns to exclude
-cat = c('Education', 'Marital_Status')
+# list with columns to exclude
+var = c('Education', 'Marital_Status')
 
 # replace data with scaled columns
  # scale_df <- as_tibble(scale(df[, !names(df) %in% cat]))
-preObj <- caret::preProcess(value_df[, !names(value_df) %in% cat], method=c("center", "scale"))
-scale_df <- predict(preObj, value_df[, !names(value_df) %in% cat])
+preObj <- caret::preProcess(value_df[, !names(value_df) %in% var], method=c("center", "scale"))
+scale_df <- predict(preObj, value_df[, !names(value_df) %in% var])
 head(scale_df)
 ```
 
@@ -101,37 +109,23 @@ head(scale_df)
 # find more methods here: https://stackoverflow.com/questions/15215457/standardize-data-columns-in-r
 ```
 
-## config
+## identify best clustering approach and optimal number of clusters
 
-``` r
-no_k = 2 # number of clusters for clustering methods 
-max_k = 7 # maximum clusters in scope 
-min_k = 2 # minimum clusters in scope
-```
-
-## clValid to choose best clustering algo
-
-<https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92>
-The cValid package can be used to simultaneously compare multiple
-clustering algorithms, to identify the best clustering approach and the
-optimal number of clusters. We will compare k-means, hierarchical and
-PAM clustering. Connectivity and Silhouette are both measurements of
-connectedness while the Dunn Index is the ratio of the smallest distance
-between observations not in the same cluster to the largest
-intra-cluster distance.
+-   
 
 ``` r
 tmp_df <- scale_df %>% as.matrix()
 
-library(clValid) # Statistical and biological validation of clustering results
+library(clValid) # simultaneously compares multiple clustering algorithms, 
+                 # to identify the best clustering approach and the optimal number of clusters
 library(mclust) # BIC for parameterized Gaussian mixture models fitted by EM algorithm 
 
-intern <- clValid(tmp_df, nClust = min_k:max_k, 
+results <- clValid(tmp_df, nClust = min_k:max_k, 
                   clMethods = c("hierarchical", "kmeans", "diana", "fanny", "som", 
                                 "model", "sota", "pam", "clara", "agnes"),
-                  validation = "internal", maxitems=nrow(scale_df))
+                  validation = c("internal", "stability"))
 
-summary(intern)
+summary(results)
 ```
 
     ## 
@@ -144,248 +138,117 @@ summary(intern)
     ## Validation Measures:
     ##                                   2        3        4        5        6        7
     ##                                                                                 
-    ## hierarchical Connectivity    2.9290   6.2079  12.1659  22.5651  22.5651  31.3532
+    ## hierarchical APN             0.0023   0.0149   0.0242   0.0443   0.0499   0.1254
+    ##              AD              5.1094   5.0963   5.0635   5.0389   5.0190   5.0009
+    ##              ADM             0.0180   0.0898   0.1257   0.2230   0.2315   0.4828
+    ##              FOM             1.0002   0.9978   0.9971   0.9953   0.9957   0.9948
+    ##              Connectivity    2.9290   6.2079  12.1659  22.5651  22.5651  31.3532
     ##              Dunn            0.4439   0.3799   0.3799   0.3588   0.3588   0.3411
     ##              Silhouette      0.3385   0.2610   0.2184   0.1713   0.1538   0.1013
-    ## kmeans       Connectivity   70.4857 111.6179 116.2845 184.1687 218.3647 222.9167
+    ## kmeans       APN             0.0756   0.2884   0.3009   0.3127   0.3647   0.4493
+    ##              AD              4.7007   4.6332   4.5334   4.4338   4.3950   4.4030
+    ##              ADM             0.3019   0.9759   1.0923   1.0745   1.2729   1.4518
+    ##              FOM             0.9532   0.9382   0.9297   0.9289   0.9283   0.9260
+    ##              Connectivity   70.4857 111.6179 116.2845 184.1687 218.3647 222.9167
     ##              Dunn            0.1880   0.2246   0.1904   0.1252   0.1124   0.1685
     ##              Silhouette      0.1782   0.1228   0.1169   0.1109   0.1038   0.1128
-    ## diana        Connectivity   75.1317  83.2020  94.3845 114.8083 125.8694 174.9964
+    ## diana        APN             0.1138   0.1984   0.2335   0.3097   0.3096   0.3619
+    ##              AD              4.7517   4.6925   4.6667   4.6248   4.5220   4.4636
+    ##              ADM             0.4401   0.6560   0.7617   0.9574   0.9855   1.2255
+    ##              FOM             0.9560   0.9514   0.9503   0.9396   0.9389   0.9362
+    ##              Connectivity   75.1317  83.2020  94.3845 114.8083 125.8694 174.9964
     ##              Dunn            0.2032   0.2456   0.2579   0.2599   0.2599   0.2472
     ##              Silhouette      0.1794   0.1598   0.1496   0.1441   0.1353   0.1260
-    ## fanny        Connectivity   88.1198       NA       NA       NA       NA       NA
+    ## fanny        APN             0.0723       NA       NA       NA       NA       NA
+    ##              AD              4.6893       NA       NA       NA       NA       NA
+    ##              ADM             0.2463       NA       NA       NA       NA       NA
+    ##              FOM             0.9466       NA       NA       NA       NA       NA
+    ##              Connectivity   88.1198       NA       NA       NA       NA       NA
     ##              Dunn            0.1822       NA       NA       NA       NA       NA
     ##              Silhouette      0.1708       NA       NA       NA       NA       NA
-    ## som          Connectivity   71.7321  93.6258 142.4409 187.0742 211.0103 217.0119
-    ##              Dunn            0.1863   0.1996   0.0470   0.1488   0.1128   0.1128
-    ##              Silhouette      0.1778   0.1703   0.1200   0.1041   0.1069   0.1067
-    ## model        Connectivity   76.9810 122.3706 126.7575 205.7246 232.6060 222.5063
+    ## som          APN             0.0870   0.1373   0.2727   0.3390   0.4036   0.3559
+    ##              AD              4.6967   4.5515   4.4934   4.4532   4.4132   4.2761
+    ##              ADM             0.3238   0.5333   0.9226   1.1754   1.3564   1.1489
+    ##              FOM             0.9422   0.9358   0.9357   0.9365   0.9277   0.9271
+    ##              Connectivity   72.4901  72.5647 144.4694 201.4754 218.9952 188.6147
+    ##              Dunn            0.2078   0.2334   0.1488   0.1252   0.1115   0.1124
+    ##              Silhouette      0.1807   0.1220   0.1210   0.1035   0.0999   0.1069
+    ## model        APN             0.3269   0.2557   0.3207   0.3928   0.3304   0.4529
+    ##              AD              5.0521   4.7967   4.6776   4.5979   4.4478   4.4737
+    ##              ADM             1.1755   0.8560   1.1113   1.2393   1.1224   1.3743
+    ##              FOM             0.9702   0.9683   0.9547   0.9433   0.9456   0.9430
+    ##              Connectivity   76.9810 122.3706 126.7575 205.7246 232.6060 222.5063
     ##              Dunn            0.1777   0.1614   0.1747   0.1747   0.1415   0.1487
     ##              Silhouette      0.1399   0.0204   0.0381   0.0310   0.0203   0.0204
-    ## sota         Connectivity   68.8925 136.1909 148.3163 156.6476 156.7905 239.6131
+    ## sota         APN             0.0683   0.1908   0.2225   0.2327   0.2485   0.2935
+    ##              AD              4.6869   4.6504   4.6337   4.6220   4.6087   4.5526
+    ##              ADM             0.2384   0.5915   0.7244   0.7725   0.8256   1.3068
+    ##              FOM             0.9445   0.9427   0.9424   0.9402   0.9379   0.9321
+    ##              Connectivity   68.8925 136.1909 148.3163 156.6476 156.7905 239.6131
     ##              Dunn            0.1924   0.1598   0.1598   0.1598   0.1598   0.1620
     ##              Silhouette      0.1804   0.1387   0.1291   0.1233   0.1102   0.0793
-    ## pam          Connectivity   79.8631 170.4873 193.8560 196.8004 198.5944 237.8310
+    ## pam          APN             0.0942   0.1644   0.2391   0.3174   0.3577   0.3192
+    ##              AD              4.7174   4.6036   4.4934   4.4468   4.3948   4.2782
+    ##              ADM             0.3226   0.4939   0.7281   0.9560   1.0944   0.9607
+    ##              FOM             0.9492   0.9422   0.9368   0.9359   0.9386   0.9310
+    ##              Connectivity   79.8631 170.4873 193.8560 196.8004 198.5944 237.8310
     ##              Dunn            0.1948   0.1554   0.1300   0.1248   0.1216   0.1345
     ##              Silhouette      0.1760   0.1105   0.1005   0.1031   0.0903   0.0884
-    ## clara        Connectivity   76.9282 167.8500 190.7119 229.9377 228.2302 280.6135
+    ## clara        APN             0.0812   0.2527   0.4096   0.3928   0.3715   0.4394
+    ##              AD              4.7104   4.6520   4.6647   4.5475   4.4562   4.4670
+    ##              ADM             0.2805   0.7958   1.2313   1.1663   1.1417   1.2744
+    ##              FOM             0.9475   0.9472   0.9454   0.9390   0.9411   0.9342
+    ##              Connectivity   76.9282 167.8500 190.7119 229.9377 228.2302 280.6135
     ##              Dunn            0.1638   0.1561   0.1554   0.1642   0.1216   0.1199
     ##              Silhouette      0.1793   0.1218   0.1136   0.0964   0.0650   0.0600
-    ## agnes        Connectivity    2.9290   6.2079  12.1659  22.5651  22.5651  31.3532
+    ## agnes        APN             0.0023   0.0149   0.0242   0.0443   0.0499   0.1254
+    ##              AD              5.1094   5.0963   5.0635   5.0389   5.0190   5.0009
+    ##              ADM             0.0180   0.0898   0.1257   0.2230   0.2315   0.4828
+    ##              FOM             1.0002   0.9978   0.9971   0.9953   0.9957   0.9948
+    ##              Connectivity    2.9290   6.2079  12.1659  22.5651  22.5651  31.3532
     ##              Dunn            0.4439   0.3799   0.3799   0.3588   0.3588   0.3411
     ##              Silhouette      0.3385   0.2610   0.2184   0.1713   0.1538   0.1013
     ## 
     ## Optimal Scores:
     ## 
     ##              Score  Method       Clusters
+    ## APN          0.0023 hierarchical 2       
+    ## AD           4.2761 som          7       
+    ## ADM          0.0180 hierarchical 2       
+    ## FOM          0.9260 kmeans       7       
     ## Connectivity 2.9290 hierarchical 2       
     ## Dunn         0.4439 hierarchical 2       
     ## Silhouette   0.3385 hierarchical 2
 
-## Clustree
-
-<https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92>
-In this figure the size of each node corresponds to the number of
-samples in each cluster, and the arrows are colored according to the
-number of samples each cluster receives. A separate set of arrows, the
-transparent ones, called the incoming node proportion, are also colored
-and shows how samples from one group end up in another group — an
-indicator of cluster instability.
-
 ``` r
-tmp_df <- scale_df
+library(NbClust) # determining the optimal number of clusters in a data set
+library(cluster) # computes various cluster algorithms
 
-library(clustree) # produce clustering trees, a visualization to interrogate clusterings as resolution increase
-
-tmp <- NULL
-for (k in 1:max_k){
-  tmp[k] <- kmeans(tmp_df, k, nstart = 30)
-}
-
-tmp_df <- data.frame(tmp)
-colnames(tmp_df) <- seq(1:max_k) # add prefix to the column names
-colnames(tmp_df) <- paste0("k", colnames(tmp_df)) 
-
-# get individual PCA
-tmp_df.pca <- prcomp(tmp_df, center = TRUE, scale. = FALSE)
-
-ind.coord <- tmp_df.pca$x
-ind.coord <- ind.coord[,1:2]
-
-tmp_df <- bind_cols(as.data.frame(tmp_df), as.data.frame(ind.coord))
-
-clustree(tmp_df, prefix = "k") # produce clustering trees, a visualization for interrogating clustering 
+fviz_nbclust(scale_df, kmeans, method = 'wss') + # Elbow method
+  labs(subtitle = "Elbow method") # add subtitle
 ```
 
 ![](nb_figs/clus_unnamed-chunk-8-1.png)<!-- -->
 
 ``` r
-overlay_list <- clustree_overlay(tmp_df, prefix = "k", x_value = "PC1", y_value = "PC2", plot_sides = TRUE)
-overlay_list$overlay
+fviz_nbclust(scale_df, kmeans, method = 'silhouette') + # Silhouette method
+  labs(subtitle = "Silhouette method") # add subtitle
 ```
 
 ![](nb_figs/clus_unnamed-chunk-8-2.png)<!-- -->
 
 ``` r
-overlay_list$x_side
-```
-
-![](nb_figs/clus_unnamed-chunk-8-3.png)<!-- -->
-
-``` r
-overlay_list$y_side
-```
-
-![](nb_figs/clus_unnamed-chunk-8-4.png)<!-- -->
-
-## hierarchical clustering
-
-<https://statsandr.com/blog/clustering-analysis-k-means-and-hierarchical-clustering-by-hand-and-in-r/#optimal-number-of-clusters>
-remind that the difference with the partition by k-means is that for
-hierarchical clustering, the number of classes is not specified in
-advance
-
-``` r
-tmp_df <- scale_df
-
-# Hierarchical clustering: single linkage
-hclust_res <- hclust(dist(tmp_df), method = 'single')
-plot(hclust_res)
-rect.hclust(hclust_res, k = no_k, border = 'blue')
-```
-
-![](nb_figs/clus_unnamed-chunk-9-1.png)<!-- -->
-
-``` r
-# fviz_dend(hclust_res, k = no_k, rect = TRUE) # can take some time for big data sets
- 
-# Hierarchical clustering: complete linkage
-hclust_res <- hclust(dist(tmp_df), method = 'complete')
-plot(hclust_res)
-rect.hclust(hclust_res, k = no_k, border = 'blue')
-```
-
-![](nb_figs/clus_unnamed-chunk-9-2.png)<!-- -->
-
-``` r
-# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
-
-# Hierarchical clustering: average linkage
-hclust_res <- hclust(dist(tmp_df), method = 'average')
-plot(hclust_res)
-rect.hclust(hclust_res, k = no_k, border = 'blue')
-```
-
-![](nb_figs/clus_unnamed-chunk-9-3.png)<!-- -->
-
-``` r
-# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
-
-# Hierarchical clustering: ward
-hclust_res <- hclust(dist(tmp_df), method = 'ward.D2')
-# plot(hclust_res)
-# rect.hclust(hclust_res, k = no_k, border = 'blue')
-fviz_dend(hclust_res, k = no_k, rect = TRUE)
-```
-
-![](nb_figs/clus_unnamed-chunk-9-4.png)<!-- -->
-
-``` r
-# Hierarchical clustering: mcquitty
-hclust_res <- hclust(dist(tmp_df), method = 'mcquitty')
-plot(hclust_res)
-rect.hclust(hclust_res, k = no_k, border = 'blue')
-```
-
-![](nb_figs/clus_unnamed-chunk-9-5.png)<!-- -->
-
-``` r
-# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
-
-# Hierarchical clustering: centroid
-hclust_res <- hclust(dist(tmp_df), method = 'centroid')
-plot(hclust_res)
-rect.hclust(hclust_res, k = no_k, border = 'blue')
-```
-
-![](nb_figs/clus_unnamed-chunk-9-6.png)<!-- -->
-
-``` r
-# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
-```
-
-## k-means clustering
-
-<https://statsandr.com/blog/clustering-analysis-k-means-and-hierarchical-clustering-by-hand-and-in-r/#optimal-number-of-clusters>
-As a reminder, this method aims at partitioning n observations into k
-clusters in which each observation belongs to the cluster with the
-closest average, serving as a prototype of the cluster
-
-``` r
-tmp_df <- scale_df
-
-library(NbClust) # determining the optimal number of clusters in a data set
-library(cluster) # computes agglomerative hierarchical clustering of the dataset
-
-# k-means clustering via the kmeans(), centers corresponds to the number of desired clusters
-kmeans_model <- kmeans(tmp_df, centers = no_k, nstart = 30) 
-# store cluster in original data set as column
-df_cluster <- tibble(value_df, cluster = as.factor(kmeans_model$cluster)) 
-df_cluster
-```
-
-    ## # A tibble: 303 x 15
-    ##      age   sex    cp trtbps  chol   fbs restecg thalachh  exng oldpeak   slp
-    ##    <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>   <dbl>    <dbl> <dbl>   <dbl> <dbl>
-    ##  1    63     1     3    145   233     1       0      150     0     2.3     0
-    ##  2    37     1     2    130   250     0       1      187     0     3.5     0
-    ##  3    41     0     1    130   204     0       0      172     0     1.4     2
-    ##  4    56     1     1    120   236     0       1      178     0     0.8     2
-    ##  5    57     0     0    120   354     0       1      163     1     0.6     2
-    ##  6    57     1     0    140   192     0       1      148     0     0.4     1
-    ##  7    56     0     1    140   294     0       0      153     0     1.3     1
-    ##  8    44     1     1    120   263     0       1      173     0     0       2
-    ##  9    52     1     2    172   199     1       1      162     0     0.5     2
-    ## 10    57     1     2    150   168     0       1      174     0     1.6     2
-    ## # ... with 293 more rows, and 4 more variables: caa <dbl>, thall <dbl>,
-    ## #   output <dbl>, cluster <fct>
-
-``` r
-# check quality of a k-means partition
-quality <- kmeans_model$betweenss / kmeans_model$totss 
-print(paste("quality of kmeans is BSS/TSS: ", format(round(quality,2), nsmall = 2)))
-```
-
-    ## [1] "quality of kmeans is BSS/TSS:  0.18"
-
-``` r
-# find optimal number of clusters
-fviz_nbclust(tmp_df, kmeans, method = 'wss') + # Elbow method
-  # geom_vline(xintercept = 2, linetype = 2) + # add line for better visualization
-  labs(subtitle = "Elbow method") # add subtitle
-```
-
-![](nb_figs/clus_unnamed-chunk-10-1.png)<!-- -->
-
-``` r
-fviz_nbclust(tmp_df, kmeans, method = 'silhouette') + # Silhouette method
-  labs(subtitle = "Silhouette method") # add subtitle
-```
-
-![](nb_figs/clus_unnamed-chunk-10-2.png)<!-- -->
-
-``` r
-fviz_nbclust(tmp_df, kmeans, # Gap statistics
+fviz_nbclust(scale_df, kmeans, # Gap statistics
              nstart = 30,
              method = 'gap_stat',
              nboot = 100) + # reduce it for lower computation time, but less precise results
   labs(subtitle = "Gap statistics method")
 ```
 
-![](nb_figs/clus_unnamed-chunk-10-3.png)<!-- -->
+![](nb_figs/clus_unnamed-chunk-8-3.png)<!-- -->
 
 ``` r
-nbclust_out <- NbClust(data = tmp_df, # NbClust
+nbclust_out <- NbClust(data = scale_df,
                        distance = 'euclidean',
                        min.nc = min_k, # minimum number of clusters
                        max.nc = max_k, # maximum number of cluster
@@ -393,7 +256,7 @@ nbclust_out <- NbClust(data = tmp_df, # NbClust
                        index = 'all')
 ```
 
-![](nb_figs/clus_unnamed-chunk-10-4.png)<!-- -->
+![](nb_figs/clus_unnamed-chunk-8-4.png)<!-- -->
 
     ## *** : The Hubert index is a graphical method of determining the number of clusters.
     ##                 In the plot of Hubert index, we seek a significant knee that corresponds to a 
@@ -401,7 +264,7 @@ nbclust_out <- NbClust(data = tmp_df, # NbClust
     ##                 index second differences plot. 
     ## 
 
-![](nb_figs/clus_unnamed-chunk-10-5.png)<!-- -->
+![](nb_figs/clus_unnamed-chunk-8-5.png)<!-- -->
 
     ## *** : The D index is a graphical method of determining the number of clusters. 
     ##                 In the plot of D index, we seek a significant knee (the significant peak in Dindex
@@ -423,7 +286,7 @@ nbclust_out <- NbClust(data = tmp_df, # NbClust
     ## *******************************************************************
 
 ``` r
-fviz_nbclust(nbclust_out) + theme_minimal() +
+fviz_nbclust(nbclust_out) + theme_minimal() + 
   labs(subtitle = "NbClust results")
 ```
 
@@ -439,92 +302,221 @@ fviz_nbclust(nbclust_out) + theme_minimal() +
     ## =========================
     ## * According to the majority rule, the best number of clusters is  5 .
 
+![](nb_figs/clus_unnamed-chunk-8-6.png)<!-- -->
+
+``` r
+library(clustree) # produce clustering trees, a visualization to interrogate clusterings as resolution increase
+
+tmp <- NULL
+for (k in 1:max_k){
+  tmp[k] <- kmeans(scale_df, k, nstart = 30) # kmeans used to produce clusters
+}
+
+tmp_df <- data.frame(tmp)
+colnames(tmp_df) <- seq(1:max_k) # add prefix to the column names
+colnames(tmp_df) <- paste0("k", colnames(tmp_df)) 
+
+# get individual PCA
+tmp_df.pca <- prcomp(tmp_df, center = TRUE, scale. = FALSE)
+
+ind.coord <- tmp_df.pca$x
+ind.coord <- ind.coord[,1:2]
+
+tmp_df <- bind_cols(as.data.frame(tmp_df), as.data.frame(ind.coord))
+
+clustree(tmp_df, prefix = "k") # produce clustering trees, a visualization for interrogating clustering 
+```
+
+![](nb_figs/clus_unnamed-chunk-9-1.png)<!-- -->
+
+``` r
+overlay_list <- clustree_overlay(tmp_df, prefix = "k", x_value = "PC1", y_value = "PC2", plot_sides = TRUE)
+overlay_list$overlay
+```
+
+![](nb_figs/clus_unnamed-chunk-9-2.png)<!-- -->
+
+``` r
+overlay_list$x_side
+```
+
+![](nb_figs/clus_unnamed-chunk-9-3.png)<!-- -->
+
+``` r
+overlay_list$y_side
+```
+
+![](nb_figs/clus_unnamed-chunk-9-4.png)<!-- -->
+
+## hierarchical clustering
+
+-   
+
+``` r
+# Hierarchical clustering: single linkage
+hclust_res <- hclust(dist(scale_df), method = 'single')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+```
+
+![](nb_figs/clus_unnamed-chunk-10-1.png)<!-- -->
+
+``` r
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) # can take some time for big data sets
+ 
+# Hierarchical clustering: complete linkage
+hclust_res <- hclust(dist(scale_df), method = 'complete')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+```
+
+![](nb_figs/clus_unnamed-chunk-10-2.png)<!-- -->
+
+``` r
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
+
+# Hierarchical clustering: average linkage
+hclust_res <- hclust(dist(scale_df), method = 'average')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+```
+
+![](nb_figs/clus_unnamed-chunk-10-3.png)<!-- -->
+
+``` r
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
+
+# Hierarchical clustering: ward
+hclust_res <- hclust(dist(scale_df), method = 'ward.D2')
+# plot(hclust_res)
+# rect.hclust(hclust_res, k = no_k, border = 'blue')
+fviz_dend(hclust_res, k = no_k, rect = TRUE)
+```
+
+![](nb_figs/clus_unnamed-chunk-10-4.png)<!-- -->
+
+``` r
+# Hierarchical clustering: mcquitty
+hclust_res <- hclust(dist(scale_df), method = 'mcquitty')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+```
+
+![](nb_figs/clus_unnamed-chunk-10-5.png)<!-- -->
+
+``` r
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
+
+# Hierarchical clustering: centroid
+hclust_res <- hclust(dist(scale_df), method = 'centroid')
+plot(hclust_res)
+rect.hclust(hclust_res, k = no_k, border = 'blue')
+```
+
 ![](nb_figs/clus_unnamed-chunk-10-6.png)<!-- -->
+
+``` r
+# fviz_dend(hclust_res, k = no_k, rect = TRUE) 
+```
+
+## k-means clustering
+
+-   
+
+``` r
+# k-means clustering, centers corresponds to the number of desired clusters
+kmeans_model <- kmeans(scale_df, centers = no_k, nstart = 30) 
+
+# store cluster in original data set as column
+df_cluster <- tibble(value_df, cluster = as.factor(kmeans_model$cluster)) 
+
+# check quality of a k-means partition
+quality <- kmeans_model$betweenss / kmeans_model$totss 
+print(paste("quality of kmeans is BSS/TSS: ", format(round(quality,2), nsmall = 2)))
+```
+
+    ## [1] "quality of kmeans is BSS/TSS:  0.18"
 
 ``` r
 # check quality of clustering
 #  if a large majority of the silhouette coefficients are positive, 
 #  it indicates that the observations are placed in the correct group
-sil <- silhouette(kmeans_model$cluster, dist(tmp_df)) 
+sil <- silhouette(kmeans_model$cluster, dist(scale_df)) 
 fviz_silhouette(sil)
 ```
 
     ##   cluster size ave.sil.width
-    ## 1       1  180          0.20
-    ## 2       2  123          0.14
+    ## 1       1  123          0.14
+    ## 2       2  180          0.20
 
-![](nb_figs/clus_unnamed-chunk-10-7.png)<!-- -->
+![](nb_figs/clus_unnamed-chunk-11-1.png)<!-- -->
 
 ``` r
-fviz_cluster(kmeans_model, tmp_df, ellipse.type = 'norm') + theme_minimal()
+fviz_cluster(kmeans_model, scale_df, ellipse.type = 'norm') + theme_minimal()
 ```
 
-![](nb_figs/clus_unnamed-chunk-10-8.png)<!-- -->
+![](nb_figs/clus_unnamed-chunk-11-2.png)<!-- -->
 
 ``` r
-fviz_cluster(kmeans_model, tmp_df) + theme_minimal()
+fviz_cluster(kmeans_model, scale_df) + theme_minimal()
 ```
 
-![](nb_figs/clus_unnamed-chunk-10-9.png)<!-- -->
+![](nb_figs/clus_unnamed-chunk-11-3.png)<!-- -->
 
 ``` r
-tmp_df <- scale_df
-
+# trying multiple cluster numbers 
 kmean_calc <- function(df, ...){
   kmeans(df, scaled = ..., nstart = 30)
 }
 
-km2 <- kmean_calc(tmp_df, 2)
-km3 <- kmean_calc(tmp_df, 3)
-km4 <- kmeans(tmp_df, 4)
-km5 <- kmeans(tmp_df, 5)
-km6 <- kmeans(tmp_df, 6)
-km7 <- kmeans(tmp_df, 7)
+km2 <- kmean_calc(scale_df, 2)
+km3 <- kmean_calc(scale_df, 3)
+km4 <- kmeans(scale_df, 4)
+km5 <- kmeans(scale_df, 5)
+km6 <- kmeans(scale_df, 6)
+km7 <- kmeans(scale_df, 7)
 
-p1 <- fviz_cluster(km2, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p1 <- fviz_cluster(km2, data = scale_df, ellipse.type = "convex") + theme_minimal()
 p1 <- ggplotly(p1) %>% layout(annotations = list(text = "k = 2", xref = "paper", yref = "paper", 
                                                  yanchor = "bottom", xanchor = "center", 
                                                  align = "center", x = 0.5, y = 1, showarrow = FALSE))
-p2 <- fviz_cluster(km3, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p2 <- fviz_cluster(km3, data = scale_df, ellipse.type = "convex") + theme_minimal()
 p2 <- ggplotly(p2) %>% layout(annotations = list(text = "k = 3", xref = "paper", yref = "paper", 
                                                  yanchor = "bottom", xanchor = "center", 
                                                  align = "center", x = 0.5, y = 1, showarrow = FALSE))
-p3 <- fviz_cluster(km4, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p3 <- fviz_cluster(km4, data = scale_df, ellipse.type = "convex") + theme_minimal()
 p3 <- ggplotly(p3) %>% layout(annotations = list(text = "k = 4", xref = "paper", yref = "paper", 
                                                  yanchor = "bottom", xanchor = "center", 
                                                  align = "center", x = 0.5, y = 1, showarrow = FALSE))
-p4 <- fviz_cluster(km5, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p4 <- fviz_cluster(km5, data = scale_df, ellipse.type = "convex") + theme_minimal()
 p4 <- ggplotly(p4) %>% layout(annotations = list(text = "k = 5", xref = "paper", yref = "paper", 
                                                  yanchor = "bottom", xanchor = "center", 
                                                  align = "center", x = 0.5, y = 1, showarrow = FALSE))
-p5 <- fviz_cluster(km6, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p5 <- fviz_cluster(km6, data = scale_df, ellipse.type = "convex") + theme_minimal()
 p5 <- ggplotly(p5) %>% layout(annotations = list(text = "k = 6", xref = "paper", yref = "paper", 
                                                  yanchor = "bottom", xanchor = "center", 
                                                  align = "center", x = 0.5, y = 1, showarrow = FALSE))
-p6 <- fviz_cluster(km7, data = tmp_df, ellipse.type = "convex") + theme_minimal()
+p6 <- fviz_cluster(km7, data = scale_df, ellipse.type = "convex") + theme_minimal()
 p6 <- ggplotly(p6) %>% layout(annotations = list(text = "k = 7", xref = "paper", yref = "paper", 
                                                  yanchor = "bottom", xanchor = "center", 
                                                  align = "center", x = 0.5, y = 1, showarrow = FALSE))
-# TOOD: make all plots linked
+
 fig <- subplot(p1, p2, p3 , p4, p5, p6, nrows = 2, shareX = TRUE, shareY = TRUE) %>% layout() 
 fig
 ```
 
-![](nb_figs/clus_unnamed-chunk-11-1.png)<!-- -->
+![](nb_figs/clus_unnamed-chunk-11-4.png)<!-- -->
 
-## principal component analysis colored by self organizing map cluster
+## principal component analysis + self organizing map cluster
 
-I need more knowledge how to work with and interpret SOM and PCA, maybe
-also not enough observations in data set
-<https://iamciera.github.io/SOMexample/html/SOM_RNAseq_tutorial_part2a_SOM.html>
+-   TODO: PCA should be in a dimensionality reduction notebook and only
+    for viz shortly, SOM as a
 
 ``` r
-tmp_df <- scale_df
-
 library(kohonen) # functions to train self-organising maps (SOMs)
 
 # principle component analysis
-pca <- prcomp(tmp_df, scale=FALSE)
+pca <- prcomp(scale_df, scale=FALSE)
 summary(pca)
 ```
 
@@ -572,9 +564,9 @@ data_val <- cbind(value_df, pca_scores)
 set.seed(3)
 
 # define a grid for the SOM and train
-grid_size <- ncol(tmp_df)
+grid_size <- ncol(scale_df)
 som_grid <- somgrid(xdim = grid_size, ydim = grid_size, topo = 'hexagonal')
-som_model <- som(as.matrix(tmp_df), grid = som_grid)
+som_model <- som(as.matrix(scale_df), grid = som_grid)
 summary(som_model)
 ```
 
@@ -666,43 +658,13 @@ pcasom_plot
 
 ![](nb_figs/clus_unnamed-chunk-12-7.png)<!-- -->
 
-## Extracting Features of Clusters
+## cluster validation
 
-<https://towardsdatascience.com/10-tips-for-choosing-the-optimal-number-of-clusters-277e93d72d92>
-Ultimately, we would like to answer questions like “what is it that
-makes this cluster unique from others?” and “what are the clusters that
-are similar to one another”. Let’s select some clusters and interrogate
-the features of these clusters.
+-   take appropriate viz from notebook describe_group
 
 ``` r
-tmp_df <- scale_df
+final <- kmeans(scale_df, no_k, nstart = 30)
 
-# compute dissimilarity matrix with euclidean distances
-d <- dist(tmp_df, method = 'euclidean')
-
-# hierarchical clustering using Ward's method
-res_hc <- hclust(d, method = 'ward.D2')
-
-# cut tree into 3 groups
-grp <- cutree(res_hc, k = no_k)
-
-# visualize
-plot(res_hc, cex = 0.6) # plot tree
-rect.hclust(res_hc, k = no_k, border = 2:5) # add rectangles
-```
-
-![](nb_figs/clus_unnamed-chunk-13-1.png)<!-- -->
-
-``` r
-# execution of k-means with k = 4
-final <- kmeans(tmp_df, no_k, nstart = 30)
-
-fviz_cluster(final, data = tmp_df) + theme_minimal() + ggtitle("k = 4")
-```
-
-![](nb_figs/clus_unnamed-chunk-13-2.png)<!-- -->
-
-``` r
 as.tibble(scale_df) %>% 
   mutate(cluster = final$cluster) %>%
   group_by(cluster) %>%
@@ -744,60 +706,3 @@ as.tibble(value_df) %>%
     ## 1       1    52     1     2    130  236.     0       1      162     0     0.1
     ## 2       2    58     1     0    130  249      0       0      139     1     1.8
     ## # ... with 4 more variables: slp <dbl>, caa <dbl>, thall <dbl>, output <dbl>
-
-``` r
-tmp_df <- as_tibble(scale_df) %>% rownames_to_column()
-cluster_pos <- as_tibble(final$cluster) %>% rownames_to_column()
-colnames(cluster_pos) <- c("rowname", "cluster")
-final <- inner_join(cluster_pos, tmp_df, by = "rowname")
-
-
-library(ggiraphExtra) # for exploratory plots, see https://rpubs.com/cardiomoon/231820
-
-radar <- ggRadar(final[-1], aes(group = cluster), rescale = FALSE,
-        legend.position = "none", size = 1, interactive = FALSE, use.label = TRUE) +
-  # facet_wrap(~cluster) +
-  scale_y_discrete(breaks = NULL) + # don't show ticks
-  theme_minimal()
-
-radar
-```
-
-![](nb_figs/clus_unnamed-chunk-15-1.png)<!-- -->
-
-``` r
-tmp_df <- as_tibble(scale_df)
-tmp_df$cluster <- as.factor(final$cluster)
-
-library(GGally) # extends ggplot2 by adding several functions to reduce the complexity
-
-ggpairs(tmp_df, 1:ncol(tmp_df), mapping = ggplot2::aes(color = cluster, alpha = 0.5),
-        diag = list(continuous = wrap("densityDiag")),
-        lower = list(continuous = wrap("points", alpha = 0.6)),
-        progress = FALSE) +
-  theme_minimal()
-```
-
-![](nb_figs/clus_unnamed-chunk-16-1.png)<!-- -->
-
-``` r
-tmp_df <- as_tibble(scale_df)
-tmp_df$cluster <- as.factor(final$cluster)
-
-library(GGally) # extends ggplot2 by adding several functions to reduce the complexity 
-
-# https://www.r-graph-gallery.com/parallel-plot-ggally.html#custom
-parcoord_plot <- ggparcoord(tmp_df,
-           columns = 1:ncol(scale_df), groupColumn = ncol(tmp_df),
-           scale='center', # scaling: standardize and center variables
-           showPoints = FALSE,
-           alphaLines = 0.3) +
-  theme_minimal() 
-parcoord_plot <- ggplotly(parcoord_plot) %>% layout(autosize=T)
-
-parcoord_plot
-```
-
-![](nb_figs/clus_unnamed-chunk-17-1.png)<!-- -->
-
-## testing clusters
