@@ -1,7 +1,7 @@
 describe bivariate for template data
 ================
 Sascha Siegmund
-2022-01-15
+2022-02-10
 
 ## purpose of notebook
 
@@ -83,9 +83,11 @@ summary(df)
     ##  Max.   :3.000   Max.   :1.0000   (143,151]:28   (155,184]:22  
     ##                                   (Other)  :54   (Other)  :18
 
-## scagnostics
+## overview of all bivariate combinations
 
--   
+-   scagnostics is used to produce all the plot combinations, but is
+    also capable of calculating a lot of different measures to classify
+    the bivariate plot
 
 ``` r
 # Scagnostics (scatterplot diagnostics) summarize potentially interesting patterns in 2d scatterplots
@@ -337,7 +339,7 @@ for(i in 1:dim(g)[1])
 
 ![](nb_figs/multi_unnamed-chunk-5-3.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-4.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-5.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-6.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-7.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-8.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-9.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-10.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-11.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-12.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-13.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-14.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-15.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-16.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-17.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-18.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-19.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-20.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-21.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-22.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-23.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-24.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-25.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-26.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-27.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-28.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-29.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-30.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-31.png)<!-- -->![](nb_figs/multi_unnamed-chunk-5-32.png)<!-- -->
 
-## bivariate numeric over numeric
+## explore bivariate numeric over numeric
 
 -   
 
@@ -403,7 +405,7 @@ fig
 
 ![](nb_figs/multi_unnamed-chunk-6-1.png)<!-- -->
 
-## bivariate numeric over numeric, many observations
+## explore bivariate numeric over numeric, many observations
 
 -   
 
@@ -465,7 +467,7 @@ fig
 
 ![](nb_figs/multi_unnamed-chunk-7-1.png)<!-- -->
 
-## bivariate numeric over categorical
+## explore bivariate numeric over categorical
 
 -   
 
@@ -536,7 +538,58 @@ fig
 
 ![](nb_figs/multi_unnamed-chunk-8-1.png)<!-- -->
 
-## bivarite categorical over categorical (mosaic plot)
+## explore bivariate numeric over categorical (many categories, density heatmap)
+
+-   
+
+``` r
+name = c('trtbps', 'thall')
+tmp_df <- df %>% rename(x = name[1], c = name[2]) %>% select(x, c) %>% 
+  mutate(c = factor(c))
+
+p1 <- tmp_df %>% 
+  ggplot(aes(x = x, y = c, group = c, fill = after_stat(density))) +
+    geom_tile(stat = "density", show.legend = FALSE) +
+    scale_fill_viridis_c() +
+    theme_minimal() +
+    ggtitle(paste("distribution of", name[2], "over", name[1], sep=" "))
+p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
+
+p2 <- tmp_df %>%
+  ggplot(aes(x = x)) +
+    stat_density(geom="line") + 
+    theme_minimal()
+p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p3 <- tmp_df %>%
+  ggplot(aes(x = 1, y = x)) +
+    geom_boxplot() +
+    theme_minimal() +
+    coord_flip() 
+p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p5 <- tmp_df %>%
+  ggplot(aes(x = c)) +
+    geom_bar() +
+    theme_minimal() +
+    coord_flip()
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+fig <- subplot(p2, plotly_empty(),
+               p3, plotly_empty(),
+               p1, p5,
+               nrows = 3, margin = 0, heights = c(0.07, 0.03, 0.9), widths = c(0.95, 0.05), 
+               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
+
+fig
+```
+
+![](nb_figs/multi_unnamed-chunk-9-1.png)<!-- -->
+
+## explore bivarite categorical over categorical (mosaic plot)
 
 -   
 
@@ -597,9 +650,9 @@ fig <- subplot(p3, plotly_empty(),
 fig
 ```
 
-![](nb_figs/multi_unnamed-chunk-9-1.png)<!-- -->
+![](nb_figs/multi_unnamed-chunk-10-1.png)<!-- -->
 
-## bivarite categorical over categorical (many categories, heatmap)
+## explore bivarite categorical over categorical (many categories, heatmap)
 
 -   
 
@@ -639,62 +692,11 @@ fig <- subplot(p2, plotly_empty(),
 fig
 ```
 
-![](nb_figs/multi_unnamed-chunk-10-1.png)<!-- -->
-
-## bivariate numeric over categorical (many categories, density heatmap)
-
--   
-
-``` r
-name = c('trtbps', 'thall')
-tmp_df <- df %>% rename(x = name[1], c = name[2]) %>% select(x, c) %>% 
-  mutate(c = factor(c))
-
-p1 <- tmp_df %>% 
-  ggplot(aes(x = x, y = c, group = c, fill = after_stat(density))) +
-    geom_tile(stat = "density", show.legend = FALSE) +
-    scale_fill_viridis_c() +
-    theme_minimal() +
-    ggtitle(paste("distribution of", name[2], "over", name[1], sep=" "))
-p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
-
-p2 <- tmp_df %>%
-  ggplot(aes(x = x)) +
-    stat_density(geom="line") + 
-    theme_minimal()
-p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-p3 <- tmp_df %>%
-  ggplot(aes(x = 1, y = x)) +
-    geom_boxplot() +
-    theme_minimal() +
-    coord_flip() 
-p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-p5 <- tmp_df %>%
-  ggplot(aes(x = c)) +
-    geom_bar() +
-    theme_minimal() +
-    coord_flip()
-p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-fig <- subplot(p2, plotly_empty(),
-               p3, plotly_empty(),
-               p1, p5,
-               nrows = 3, margin = 0, heights = c(0.07, 0.03, 0.9), widths = c(0.95, 0.05), 
-               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
-
-fig
-```
-
 ![](nb_figs/multi_unnamed-chunk-11-1.png)<!-- -->
 
-## bivariate parallel coordinate plot (max 1000 rows)
+## explore bivariate correlation (max 1000 rows, slop plot)
 
--   max 1000 rows, correlation
+-   
 
 ``` r
 name = c('age', 'thalachh')

@@ -1,7 +1,7 @@
 describe bivariate with time for template data
 ================
 Sascha Siegmund
-2022-01-15
+2022-02-10
 
 ## purpose of notebook
 
@@ -67,7 +67,7 @@ summary(df)
     ##  3rd Qu.:149.00   3rd Qu.: 0.000  
     ##  Max.   :297.00   Max.   :31.000
 
-## univariate time
+## explore numerical univariate time
 
 -   
 
@@ -119,7 +119,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-5-1.png)<!-- -->
 
-## univariate time grouped
+## explore categorical or grouped univariate time
 
 -   you can pull out individual parts of the date with the accessor
     functions year(), month(, label = TRUE), mday() (day of the month),
@@ -169,7 +169,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-6-1.png)<!-- -->
 
-## bivariate numeric over grouped time
+## explore bivariate numeric over grouped time
 
 -   you can pull out individual parts of the date with the accessor
     functions year(), month(, label = TRUE), mday() (day of the month),
@@ -239,7 +239,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-7-1.png)<!-- -->
 
-## bivarite categorical over grouped time (conditioned mosaic plot)
+## explore bivarite categorical over grouped time (conditioned mosaic plot)
 
 -   you can pull out individual parts of the date with the accessor
     functions year(), month(, label = TRUE), mday() (day of the month),
@@ -298,7 +298,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-8-1.png)<!-- -->
 
-## bivariate numeric over time, one observation per time stamp and group
+## explore bivariate numeric over time (one observation per timestamp and group)
 
 -   
 
@@ -345,7 +345,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-9-1.png)<!-- -->
 
-## bivariate categoric over time, one observation per time stamp and group
+## explore bivariate categoric over time (one observation per timestamp and group)
 
 -   
 
@@ -382,7 +382,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-10-1.png)<!-- -->
 
-## bivariate count over time per group/observation (heatmap)
+## explore bivariate count over time per group (heatmap)
 
 -   
 
@@ -424,7 +424,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-11-1.png)<!-- -->
 
-## bivariate numeric over time per group/observation (heatmap)
+## explore bivariate numerical over time per group (heatmap)
 
 -   
 
@@ -466,7 +466,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-12-1.png)<!-- -->
 
-## bivariate categoric over time per group/observation (heatmap)
+## explore bivariate categorical over time per group (heatmap)
 
 -   
 
@@ -510,7 +510,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-13-1.png)<!-- -->
 
-## bivariate numeric over numeric over time
+## explore association of numeric over numeric over time
 
 -   
 
@@ -572,7 +572,7 @@ fig
 
 ![](nb_figs/time_unnamed-chunk-14-1.png)<!-- -->
 
-## bivariate parallel coordinate plot over time (max 1000 rows)
+## explore bivariate correlation with time (max 1000 rows, slop plot)
 
 -   
 

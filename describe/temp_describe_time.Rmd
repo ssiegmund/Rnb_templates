@@ -60,7 +60,7 @@ summary(df)
 ```
 
 
-## univariate time
+## explore numerical univariate time
 
 -
 
@@ -111,7 +111,7 @@ fig
 ```
 
 
-## univariate time grouped
+## explore categorical or grouped univariate time
 
 - you can pull out individual parts of the date with the accessor functions year(), month(, label = TRUE), mday() (day of the month), yday() (day of the year), wday(, label = TRUE) (day of the week), hour(), minute(), and second()
 
@@ -157,7 +157,7 @@ fig
 ```
 
 
-## bivariate numeric over grouped time 
+## explore bivariate numeric over grouped time 
 
 - you can pull out individual parts of the date with the accessor functions year(), month(, label = TRUE), mday() (day of the month), yday() (day of the year), wday(, label = TRUE) (day of the week), hour(), minute(), and second()
 
@@ -223,7 +223,7 @@ fig
 ```
 
 
-## bivarite categorical over grouped time (conditioned mosaic plot)
+## explore bivarite categorical over grouped time (conditioned mosaic plot)
 
 - you can pull out individual parts of the date with the accessor functions year(), month(, label = TRUE), mday() (day of the month), yday() (day of the year), wday(, label = TRUE) (day of the week), hour(), minute(), and second()
 
@@ -278,7 +278,7 @@ fig
 ```
 
 
-## bivariate numeric over time, one observation per time stamp and group 
+## explore bivariate numeric over time (one observation per timestamp and group) 
 
 - 
 
@@ -324,7 +324,7 @@ fig
 ```
 
 
-## bivariate categoric over time, one observation per time stamp and group 
+## explore bivariate categoric over time (one observation per timestamp and group)  
 
 - 
 
@@ -360,7 +360,7 @@ fig
 ```
 
 
-## bivariate count over time per group/observation (heatmap)
+## explore bivariate count over time per group (heatmap)
 
 -
 
@@ -401,7 +401,7 @@ fig
 ```
 
 
-## bivariate numeric over time per group/observation (heatmap)
+## explore bivariate numerical over time per group (heatmap)
 
 -
 
@@ -442,7 +442,7 @@ fig
 ```
 
 
-## bivariate categoric over time per group/observation (heatmap)
+## explore bivariate categorical over time per group (heatmap)
 
 -
 
@@ -485,7 +485,7 @@ fig
 ```
 
 
-## bivariate numeric over numeric over time 
+## explore association of numeric over numeric over time 
 
 -
 
@@ -546,7 +546,7 @@ fig
 ```
 
 
-## bivariate parallel coordinate plot over time (max 1000 rows)
+## explore bivariate correlation with time (max 1000 rows, slop plot)
 
 - 
 

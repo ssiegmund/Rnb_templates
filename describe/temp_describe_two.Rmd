@@ -56,9 +56,9 @@ summary(df)
 ```
 
 
-## scagnostics
+## overview of all bivariate combinations
 
-- 
+- scagnostics is used to produce all the plot combinations, but is also capable of calculating a lot of different measures to classify the bivariate plot 
 
 ```{r}
 # Scagnostics (scatterplot diagnostics) summarize potentially interesting patterns in 2d scatterplots
@@ -100,7 +100,7 @@ for(i in 1:dim(g)[1])
 ```
 
 
-## bivariate numeric over numeric
+##  explore bivariate numeric over numeric
 
 - 
 
@@ -165,7 +165,7 @@ fig
 ```
 
 
-## bivariate numeric over numeric, many observations
+## explore bivariate numeric over numeric, many observations
 
 - 
 
@@ -226,7 +226,7 @@ fig
 ```
 
 
-## bivariate numeric over categorical
+## explore bivariate numeric over categorical
 
 - 
 
@@ -296,7 +296,57 @@ fig
 ```
 
 
-## bivarite categorical over categorical (mosaic plot)
+## explore bivariate numeric over categorical (many categories, density heatmap)
+
+-
+
+```{r}
+name = c('trtbps', 'thall')
+tmp_df <- df %>% rename(x = name[1], c = name[2]) %>% select(x, c) %>% 
+  mutate(c = factor(c))
+
+p1 <- tmp_df %>% 
+  ggplot(aes(x = x, y = c, group = c, fill = after_stat(density))) +
+    geom_tile(stat = "density", show.legend = FALSE) +
+    scale_fill_viridis_c() +
+    theme_minimal() +
+    ggtitle(paste("distribution of", name[2], "over", name[1], sep=" "))
+p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
+
+p2 <- tmp_df %>%
+  ggplot(aes(x = x)) +
+    stat_density(geom="line") + 
+    theme_minimal()
+p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p3 <- tmp_df %>%
+  ggplot(aes(x = 1, y = x)) +
+    geom_boxplot() +
+    theme_minimal() +
+    coord_flip() 
+p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+p5 <- tmp_df %>%
+  ggplot(aes(x = c)) +
+    geom_bar() +
+    theme_minimal() +
+    coord_flip()
+p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
+                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+
+fig <- subplot(p2, plotly_empty(),
+               p3, plotly_empty(),
+               p1, p5,
+               nrows = 3, margin = 0, heights = c(0.07, 0.03, 0.9), widths = c(0.95, 0.05), 
+               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
+
+fig
+```
+
+
+## explore bivarite categorical over categorical (mosaic plot)
 
 - 
 
@@ -358,7 +408,7 @@ fig
 ```
 
 
-## bivarite categorical over categorical (many categories, heatmap)
+## explore bivarite categorical over categorical (many categories, heatmap)
 
 - 
 
@@ -399,59 +449,9 @@ fig
 ```
 
 
-## bivariate numeric over categorical (many categories, density heatmap)
+## explore bivariate correlation (max 1000 rows, slop plot)
 
--
-
-```{r}
-name = c('trtbps', 'thall')
-tmp_df <- df %>% rename(x = name[1], c = name[2]) %>% select(x, c) %>% 
-  mutate(c = factor(c))
-
-p1 <- tmp_df %>% 
-  ggplot(aes(x = x, y = c, group = c, fill = after_stat(density))) +
-    geom_tile(stat = "density", show.legend = FALSE) +
-    scale_fill_viridis_c() +
-    theme_minimal() +
-    ggtitle(paste("distribution of", name[2], "over", name[1], sep=" "))
-p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
-
-p2 <- tmp_df %>%
-  ggplot(aes(x = x)) +
-    stat_density(geom="line") + 
-    theme_minimal()
-p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-p3 <- tmp_df %>%
-  ggplot(aes(x = 1, y = x)) +
-    geom_boxplot() +
-    theme_minimal() +
-    coord_flip() 
-p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-p5 <- tmp_df %>%
-  ggplot(aes(x = c)) +
-    geom_bar() +
-    theme_minimal() +
-    coord_flip()
-p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-fig <- subplot(p2, plotly_empty(),
-               p3, plotly_empty(),
-               p1, p5,
-               nrows = 3, margin = 0, heights = c(0.07, 0.03, 0.9), widths = c(0.95, 0.05), 
-               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
-
-fig
-```
-
-
-## bivariate parallel coordinate plot (max 1000 rows)
-
-- max 1000 rows, correlation 
+-  
 
 ```{r}
 name = c('age', 'thalachh')

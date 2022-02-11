@@ -1,7 +1,7 @@
 describe univariate for template data
 ================
 Sascha Siegmund
-2022-01-15
+2022-02-10
 
 ## purpose of notebook
 
@@ -225,7 +225,7 @@ summary(df)
     ##  Max.   :755000  
     ## 
 
-## overview variables
+## overview of all numerical variables
 
 -   
 
@@ -234,7 +234,7 @@ tmp_df <- df %>% select_if(is.numeric) %>% select(-Id, -MiscVal) %>%
   scale() %>% as_tibble() %>% pivot_longer(everything())
 
 # https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
-p1 <- tmp_df %>% 
+fig <- tmp_df %>% 
   ggplot(aes(x = value, y = name, color = name, fill = name)) +
     geom_density_ridges(jittered_points = TRUE, position = "raincloud",
       alpha = 0.3, scale = 0.95, rel_min_height = .005) + 
@@ -246,12 +246,12 @@ p1 <- tmp_df %>%
     theme_ridges(grid = FALSE) +
     theme(legend.position = "none") +
     ggtitle("scaled density of all numeric variables") 
-p1
+fig
 ```
 
 ![](nb_figs/uni_unnamed-chunk-5-1.png)<!-- -->
 
-## univariate numeric
+## explore numerical univariate variable
 
 -   
 
@@ -271,15 +271,15 @@ p2 <- tmp_df %>%
   ggplot(aes(x = value)) +
     geom_spoke(aes(y = -n, radius = 2*n, angle = pi/2, text = paste0("value: ", value, "\ncount: ", n)),
                alpha = 0.5, stat = "unique") +  # y = 0, radius = n for one-sided spoke plot
-    theme_minimal()  
+    ggtitle(paste("distribution of", name, sep=" ")) +
+    theme_minimal() 
 p2 <- ggplotly(p2, tooltip = 'text') %>% layout()
 
 p3 <- tmp_df %>%
   ggplot(aes(x = 1, y = value)) +
     geom_boxplot() +
     theme_minimal() +
-    coord_flip() +
-    ggtitle(paste("distribution of", name, sep=" ")) 
+    coord_flip() 
 p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE))
 
 p5 <- tmp_df %>%
@@ -303,7 +303,7 @@ fig
 
 ![](nb_figs/uni_unnamed-chunk-6-1.png)<!-- -->
 
-## univariate categorical
+## explore categorical univariate variable
 
 -   
 

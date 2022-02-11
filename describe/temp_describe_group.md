@@ -1,7 +1,7 @@
 describe grouped data for template data
 ================
 Sascha Siegmund
-2022-01-15
+2022-02-10
 
 ## purpose of notebook
 
@@ -21,6 +21,7 @@ library(plotly) # make ggplots interactive
 library(ggmosaic) # for mosaic plots 
 library(ggridges) # for ridgeline plots
 library(GGally) # for parallel coordinate plots
+library(patchwork) # separate ggplots into the same graphic
 ```
 
 ## import data
@@ -163,7 +164,7 @@ summary(df)
     ##  3rd Qu.:0.00000   3rd Qu.:0.00000   3rd Qu.:6   
     ##  Max.   :1.00000   Max.   :1.00000   Max.   :7
 
-## overview variables grouped by factor (max 3 groups)
+## overview all variables grouped (max 3 groups)
 
 -   
 
@@ -175,7 +176,7 @@ tmp_df <- df %>% rename(g = name[1]) %>% select(-Id, -contains('Soil_Type')) %>%
   as_tibble() %>% pivot_longer(cols = -g) 
 
 #https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
-p1 <- tmp_df %>%
+fig <- tmp_df %>%
   ggplot(aes(x = value, y = name, color = g, fill = g)) +
     geom_density_ridges(jittered_points = TRUE, position = "raincloud",
       alpha = 0.3, scale = 0.95, rel_min_height = .005) +
@@ -187,12 +188,12 @@ p1 <- tmp_df %>%
     theme_ridges(font_size = 12) +
     guides(fill = guide_legend(override.aes = list(color = NA))) +
     ggtitle(paste("scaled density of all numeric variables grouped by", name[1], sep=" "))
-p1
+fig
 ```
 
 ![](nb_figs/group_unnamed-chunk-5-1.png)<!-- -->
 
-## overview variables grouped by factor (3+ groups)
+## overview all variables grouped (3+ groups)
 
 -   
 
@@ -203,38 +204,36 @@ tmp_df <- df %>% rename(g = name[1]) %>% select(-Id, -contains('Soil_Type')) %>%
   mutate(g = as.character(factor(g))) %>% pivot_longer(cols = !g) %>% 
   group_by(name) %>% mutate(q2 = quantile(value, na.rm = TRUE)[2]) %>% 
   mutate(q3 = quantile(value, na.rm = TRUE)[3]) %>% 
-  mutate(q4 = quantile(value, na.rm = TRUE)[4]) %>% ungroup()
+  mutate(q4 = quantile(value, na.rm = TRUE)[4]) %>% ungroup() %>% 
+  add_count(g)
 
 p1 <- tmp_df %>%
   ggplot(aes(x = g, y = value)) +
-    geom_boxplot(fill=NA, lwd = 0.4, outlier.alpha = 0.3, width =0.1) +
-    geom_violin(aes(color = g), scale = "area", fill = NA) +
-    geom_hline(aes(yintercept = q2), color = 'darkorange', alpha = 0.7, lty=2) +
-    geom_hline(aes(yintercept = q3), color = 'darkred', alpha = 0.7, lty=2) +
-    geom_hline(aes(yintercept = q4), color = 'darkorange', alpha = 0.7, lty=2) +
+    geom_violin(aes(color = g), scale = "area", fill = NA, lwd = 1) +
+    geom_boxplot(fill=NA, lwd = 0.4, outlier.alpha = 0.3, width =0.15) +
+    geom_hline(aes(yintercept = q2), color = 'darkorange', alpha = 0.9, lty=2) +
+    geom_hline(aes(yintercept = q3), color = 'darkred', alpha = 0.9, lty=2) +
+    geom_hline(aes(yintercept = q4), color = 'darkorange', alpha = 0.9, lty=2) +
     scale_color_brewer(guide = "none", palette = "Set2") +
     facet_wrap(vars(name), scales = 'free') +
     theme_minimal() +
-    ggtitle(paste("distribution of all variables over", name[1], sep=" ")) 
-p1 <- ggplotly(p1) %>% layout(xaxis = list(title = ''))
-
-p5 <- tmp_df %>%
-  ggplot() +
-    geom_mosaic(aes(x=product(g), fill = g)) +
-    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
-               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
-                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df), accuracy = 1))),
-              size = 3.5) +
+    labs(x = '', y = '') 
+    
+p2 <- tmp_df %>% 
+  ggplot(aes(y = n, x = g, fill = g)) + 
+    geom_bar(position = "dodge", stat = "identity") + 
+    geom_text(aes(label = n, y = Inf), vjust = 1.5, position = position_dodge(0.9), stat = "unique") +
     scale_fill_brewer(guide = "none", palette = "Set2") +
-    theme_minimal()
-p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+    theme_minimal() +
+    theme(legend.position = "none",
+          axis.ticks.y=element_blank(),
+          axis.text.y=element_blank(),
+          panel.grid=element_blank()) +
+    labs(x = "", y = "") +
+    ggtitle(paste("distribution of all variables over", name[1], sep=" ")) 
 
-fig <- subplot(p5, 
-               p1, 
-               nrows = 2,  heights = c(0.1, 0.9)) %>% layout() %>% hide_legend()
-
-fig
+p2/ p1 +
+  plot_layout(heights = c(1,12))
 ```
 
 ![](nb_figs/group_unnamed-chunk-6-1.png)<!-- -->
@@ -250,7 +249,7 @@ tmp_df <- df2 %>%  select(-Id, -contains('Soil_Type')) %>%
   na.omit()
 
 # https://r-charts.com/ranking/parallel-coordinates-ggplot2/
-p1 <- ggparcoord(tmp_df,
+fig <- ggparcoord(tmp_df,
            columns = 2:ncol(tmp_df), groupColumn = 1,
            scale='center', # scaling: standardize and center variables
            showPoints = FALSE,
@@ -258,16 +257,18 @@ p1 <- ggparcoord(tmp_df,
            alphaLines = 0.2) +
       scale_color_brewer(guide = "none", palette = "Set2") +
       theme_minimal() +
+      theme(axis.text.x = element_text(angle=45, vjust=0.7, size=10),
+            axis.text.y = element_blank()) +
+      labs(x = '', y = '') +
       facet_wrap(~g) +
       ggtitle(paste("all variables grouped by", name[1], sep=" "))
-fig <- ggplotly(p1) %>% layout(autosize=T) # drop if too many lines
 
 fig
 ```
 
 ![](nb_figs/group_unnamed-chunk-7-1.png)<!-- -->
 
-## bivariate parallel coordinate plot over groups (max 1000 rows)
+## explore bivariate correlation over groups (max 1000 rows, slop plot)
 
 -   
 
@@ -333,7 +334,7 @@ fig
 
 ![](nb_figs/group_unnamed-chunk-8-1.png)<!-- -->
 
-## scatter matrix for groups (max 3 groups, few variables)
+## overview correlation for groups (max 3 groups, few variables, scatter matrix)
 
 -   
 
@@ -355,7 +356,7 @@ fig
 
 ![](nb_figs/group_unnamed-chunk-9-1.png)<!-- -->
 
-## univariate numeric grouped by factor
+## explore univariate numerical grouped
 
 -   
 
@@ -363,7 +364,7 @@ fig
 # two variables, continuous/discrete y, categorical x, show trend and distribution
 name = c('Elevation', 'Cover_Type')
 tmp_df <- df %>% rename(y = name[1], g = name[2]) %>% select(g, y) %>% mutate(g = factor(g)) %>% 
-  add_count(g, y)
+  add_count(g, y) %>% add_count(g)
 
 so.q2 <- function(y){ quantile(y, na.rm = TRUE)[2] }
 so.q4 <- function(y){ quantile(y, na.rm = TRUE)[4] }
@@ -422,7 +423,7 @@ fig
 
 ![](nb_figs/group_unnamed-chunk-10-1.png)<!-- -->
 
-## univariate categorical grouped by factor
+## explore univariate categorical grouped
 
 -   
 
@@ -478,63 +479,7 @@ fig
 
 ![](nb_figs/group_unnamed-chunk-11-1.png)<!-- -->
 
-## bivarite categorical over categorical grouped by factor (mosaic plot)
-
--   
-
-``` r
-name = c('Wilderness_Area1', 'Wilderness_Area3', 'Cover_Type')
-tmp_df <- df %>% rename(c = name[1], d = name[2], g = name[3]) %>% select(c, d, g) %>% 
-  mutate(across(c(c,d,g), factor))
-
-# https://cran.r-project.org/web/packages/ggmosaic/vignettes/ggmosaic.html
-p1 <- tmp_df %>%
-  ggplot() +
-    geom_mosaic(aes(x=product(c, g, d), fill = c, alpha = g), divider = ddecker()) +
-    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
-               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
-                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df),  accuracy = 0.1))),
-              size = 3.5) +
-    scale_fill_brewer(guide = "none", palette = "Set2") +
-    theme_minimal() +
-    ggtitle(paste("distribution of", name[1], "over", name[2], "grouped by", name[3], sep=" "))
-p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[2]), yaxis = list(title = name[1]))
-
-p3 <- tmp_df %>%
-  ggplot() +
-    geom_mosaic(aes(x=product(d))) +
-    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
-               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
-                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df),  accuracy = 1))),
-              size = 3.5) +
-    theme_minimal() 
-p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-p5 <- tmp_df %>%
-  ggplot() +
-    geom_mosaic(aes(x=product(c))) +
-    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
-               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
-                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df),  accuracy = 1))),
-              size = 3.5) +
-    theme_minimal() +
-    coord_flip()
-p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-# merge figures into one plot, via subplots, https://plotly-r.com/arranging-views.html
-fig <- subplot(p3, plotly_empty(),
-               p1, p5, 
-               nrows = 2, margin = 0, heights = c(0.1, 0.9), widths = c(0.93, 0.07), 
-               shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
-
-fig
-```
-
-![](nb_figs/group_unnamed-chunk-12-1.png)<!-- -->
-
-## bivarite numeric over numeric grouped by factor (max 3 groups)
+## explore bivarite numeric over numeric grouped (max 3 groups)
 
 -   
 
@@ -600,9 +545,9 @@ fig <- subplot(style(p2, showlegend = FALSE), plotly_empty(), plotly_empty(),
 fig
 ```
 
-![](nb_figs/group_unnamed-chunk-13-1.png)<!-- -->
+![](nb_figs/group_unnamed-chunk-12-1.png)<!-- -->
 
-## bivarite numeric over numeric grouped by factor (3+ groups)
+## explore bivarite numeric over numeric by group (3+ groups)
 
 -   
 
@@ -610,107 +555,41 @@ fig
 # two variables, continuous x, continuous y, show trend and distribution
 name = c('Elevation', 'Aspect', 'Cover_Type')
 tmp_df <- df2 %>% rename(x = name[1], y = name[2], g = name[3]) %>% select(x, y, g) %>% 
-  mutate(g = factor(g)) %>% add_count(x, y, g)
+  mutate(g = factor(g)) %>% add_count(x, y, g) %>%  add_count(g)
 
 p1 <- tmp_df %>%
   ggplot(aes(x = x, y = y, color = g)) +
-    geom_point(data = select(tmp_df, -g), aes(size = n), alpha = 0.2, stat = "unique", color = 'grey70') + 
-    geom_point(aes(size = n), alpha = 0.4, stat = "unique") +
+    geom_point(data = select(tmp_df, -g), aes(size = n), alpha = 0.3, stat = "unique", color = 'grey70') + 
+    geom_point(aes(size = n), alpha = 0.5, stat = "unique") +
     scale_size(range = c(1, max(tmp_df$n))) +
     geom_quantile(alpha = 0.7) +
     geom_smooth() +
     facet_wrap(vars(g)) +
     scale_color_brewer(guide = "none", palette = "Set2") +
     theme_minimal() +
-    ggtitle(paste("trend of", name[2], "over", name[1], "grouped by", name[3], sep=" "))
-p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
-
-p5 <- tmp_df %>%
-  ggplot() +
-    geom_mosaic(aes(x=product(g), fill = g)) +
-    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
-               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
-                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df), accuracy = 1))),
-              size = 3.5) +
-    scale_fill_brewer(guide = "none", palette = "Set2") +
-    theme_minimal()
-p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-# drop plotly (intercativity and chart merge) if you have performance issues
-fig <- subplot(style(p5, title = FALSE), 
-               p1, 
-               nrows = 2,  heights = c(0.1, 0.9), 
-               titleX = TRUE, titleY = TRUE) %>% layout() %>% hide_legend()
-
-fig
-```
-
-![](nb_figs/group_unnamed-chunk-14-1.png)<!-- -->
-
-## bivariate numeric over categorical grouped by factor (dichtome group)
-
--   TODO: plot not really useful, due to plotly not aligning violin and
-    boxplot, better would be split violin plot, but facet version below
-    is also sufficient
-
-``` r
-# two variables, continuous/discrete y, categorical x, show trend and distribution
-name = c('Elevation', 'Wilderness_Area4', 'Wilderness_Area3')
-tmp_df <- df %>% rename(y = name[1], c = name[2], g = name[3]) %>% select(c, y, g) %>% 
-  mutate(across(c(c,g), factor)) %>% add_count(c, y, g) %>% 
-    group_by(g) %>% mutate(q3 = quantile(y, na.rm = TRUE)[3]) %>% ungroup()
-
-p1 <- tmp_df %>%
-  ggplot(aes(x = c, y = y, color = g)) +
-    geom_violin(scale = "area", fill = NA) +
-    geom_boxplot(fill = NA, lwd = 0.4, outlier.alpha = 0.3, width =0.1) +
-    geom_hline(aes(yintercept = q3, color = g), alpha = 0.5, lty=2) +
-    scale_color_brewer(guide = "none", palette = "Set2") +
-    coord_flip() +
-    theme_minimal() +
-    ggtitle(paste("distribution of", name[1], "over", name[2], "grouped by", name[3], sep=" ")) 
-p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[1]), yaxis = list(title = name[2]))
-
-p2 <- tmp_df %>%
-  ggplot(aes(x = y, color = g)) +
-    stat_density(geom="line", position = "identity", trim = TRUE) + 
-    scale_color_brewer(guide = "none", palette = "Set2") +
-    theme_minimal()
-p2 <- ggplotly(p2) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-p3 <- tmp_df %>%
-  ggplot(aes(x = g, y = y, color = g)) +
-    geom_boxplot() +
-    scale_color_brewer(guide = "none", palette = "Set2") +
-    theme_minimal() +
-    coord_flip() 
-p3 <- ggplotly(p3) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-p5 <- tmp_df %>%
-  ggplot(aes(x = g, fill = c)) +
-    geom_bar() +
+    theme(legend.position = "none") +
+    labs(x = name[1], y = name[2])
+    
+p2 <- tmp_df %>% 
+  ggplot(aes(y = nn, x = g, fill = g)) + 
+    geom_bar(position = "dodge", stat = "identity") + 
+    geom_text(aes(label = nn, y = Inf), vjust = 1.5, position = position_dodge(0.9), stat = "unique") +
     scale_fill_brewer(guide = "none", palette = "Set2") +
     theme_minimal() +
-    coord_flip()
-p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
+    theme(legend.position = "none",
+          axis.ticks.y=element_blank(),
+          axis.text.y=element_blank(),
+          panel.grid=element_blank()) +
+    labs(x = "", y = "") +
+    ggtitle(paste("trend of", name[2], "over", name[1], "grouped by", name[3], sep=" ")) 
 
-# merge figures into one plot, via subplots, https://plotly-r.com/arranging-views.html
-fig <- subplot(style(p2, showlegend = FALSE), plotly_empty(),
-               style(p3, showlegend = FALSE), plotly_empty(),
-               style(p1, showlegend = FALSE), p5,
-               nrows = 3, margin = 0, heights = c(0.08, 0.05, 0.87), widths = c(0.95, 0.05), 
-               shareX = TRUE, titleX = TRUE, titleY = TRUE) %>% layout()
-
-fig
+p2/ p1 +
+  plot_layout(heights = c(1,12))
 ```
 
-![](nb_figs/group_unnamed-chunk-15-1.png)<!-- -->
+![](nb_figs/group_unnamed-chunk-13-1.png)<!-- -->
 
-## bivariate numeric over categorical grouped by factor (2+ groups)
+## explore bivariate numeric over categorical by group
 
 -   
 
@@ -718,40 +597,80 @@ fig
 name = c('Elevation', 'Wilderness_Area4', 'Cover_Type')
 tmp_df <- df %>% rename(y = name[1], c = name[2], g = name[3]) %>% select(c, y, g) %>% 
   mutate(across(c(c,g), factor)) %>% 
-  group_by(g) %>% mutate(q2 = quantile(y, na.rm = TRUE)[2]) %>% 
-  mutate(q3 = quantile(y, na.rm = TRUE)[3]) %>% 
-  mutate(q4 = quantile(y, na.rm = TRUE)[4]) %>% ungroup()
+  add_count(c,g) %>% 
+  group_by(g) %>% mutate(g_q2 = quantile(y, na.rm = TRUE)[2]) %>% 
+  mutate(g_q3 = quantile(y, na.rm = TRUE)[3]) %>% 
+  mutate(g_q4 = quantile(y, na.rm = TRUE)[4]) %>% ungroup() %>% 
+  group_by(c) %>% mutate(c_q2 = quantile(y, na.rm = TRUE)[2]) %>% 
+  mutate(c_q3 = quantile(y, na.rm = TRUE)[3]) %>% 
+  mutate(c_q4 = quantile(y, na.rm = TRUE)[4]) %>% ungroup()
 
 p1 <- tmp_df %>%
   ggplot(aes(x = c, y = y)) +
-    geom_boxplot(fill=NA, lwd = 0.4, outlier.alpha = 0.3, width =0.1) +
-    geom_violin(aes(color = c), scale = "area", fill = NA) +
-    geom_hline(aes(yintercept = q2), color = 'darkorange', alpha = 0.7, lty=2) +
-    geom_hline(aes(yintercept = q3), color = 'darkred', alpha = 0.7, lty=2) +
-    geom_hline(aes(yintercept = q4), color = 'darkorange', alpha = 0.7, lty=2) +
+    geom_violin(aes(color = c), scale = "area", fill = NA, lwd = 1) +
+    geom_boxplot(fill=NA, lwd = 0.4, outlier.alpha = 0.3, width =0.15) +
+    geom_hline(aes(yintercept = c_q2, color = c), alpha = 0.9, lty=2) +
+    geom_hline(aes(yintercept = c_q3, color = c), alpha = 0.9, lty=1) +
+    geom_hline(aes(yintercept = c_q4, color = c), alpha = 0.9, lty=2) +
+    geom_hline(aes(yintercept = g_q2), color = 'darkred', alpha = 0.7, lty=2) +
+    geom_hline(aes(yintercept = g_q3), color = 'darkred', alpha = 0.7, lty=1) +
+    geom_hline(aes(yintercept = g_q4), color = 'darkred', alpha = 0.7, lty=2) +
     scale_color_brewer(guide = "none", palette = "Set2") +
     facet_wrap(vars(g)) +
     theme_minimal() +
+    labs(x = name[2], y = name[1])  
+
+p2 <- tmp_df %>% 
+  ggplot(aes(y = n, x = g, fill = c)) + 
+    geom_bar(position = "dodge", stat = "identity") + 
+    geom_text(aes(label = n, y = Inf), vjust = 1.5, position = position_dodge(0.9), stat = "unique") +
+    scale_fill_brewer(guide = "none", palette = "Set2") +
+    theme_minimal() +
+    theme(legend.position = "none",
+          axis.ticks.y=element_blank(),
+          axis.text.y=element_blank(),
+          panel.grid=element_blank()) +
+    labs(x = "", y = "") +
     ggtitle(paste("distribution of", name[1], "over", name[2], "grouped by", name[3], sep=" ")) 
-p1 <- ggplotly(p1) %>% layout(xaxis = list(title = name[2]), yaxis = list(title = name[1]))
 
-p5 <- tmp_df %>%
-  ggplot() +
-    geom_mosaic(aes(x=product(g))) +
-    geom_text(data = layer_data(ggplot2::last_plot(), 1) %>%  filter(.wt > 0),
-               aes(x = (xmax + xmin)/2, y = (ymax + ymin)/2, 
-                   label = paste0(.wt,"\n",scales::percent(.wt/nrow(tmp_df), accuracy = 1))),
-              size = 3.5) +
-    theme_minimal()
-p5 <- ggplotly(p5) %>% layout(yaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''), 
-                              xaxis = list(showticklabels = FALSE, showgrid = FALSE, title = ''))
-
-fig <- subplot(p5, 
-               p1, 
-               nrows = 2,  heights = c(0.1, 0.9), 
-               titleX = TRUE, titleY = TRUE) %>% layout() %>% hide_legend()
-
-fig
+p2/ p1 +
+  plot_layout(heights = c(1,12))
 ```
 
-![](nb_figs/group_unnamed-chunk-16-1.png)<!-- -->
+![](nb_figs/group_unnamed-chunk-14-1.png)<!-- -->
+
+## explore bivariate categorical over categorical by group
+
+-   
+
+``` r
+name = c('Wilderness_Area3', 'Soil_Type2', 'Cover_Type')
+tmp_df <- df %>% rename(c = name[1], d = name[2], g = name[3]) %>% select(c, d, g) %>% 
+  mutate(across(c(c,d,g), factor)) %>% add_count(g)
+
+p1 <- tmp_df %>%
+  ggplot() +
+    geom_mosaic(aes(x=product(c, d), fill = c)) +
+    geom_mosaic_text(aes(x=product(c,d)), na.rm = TRUE) +
+    scale_fill_brewer(guide = "none", palette = "Set2") +
+    theme_minimal() +
+    facet_wrap(vars(g)) +
+    labs(x = name[2], y = name[1])  
+
+p2 <- tmp_df %>% 
+  ggplot(aes(y = n, x = g)) + 
+    geom_bar(position = "dodge", stat = "identity") + 
+    geom_text(aes(label = n, y = Inf), vjust = 1.5, position = position_dodge(0.9), stat = "unique") +
+    theme_minimal() +
+    theme(legend.position = "none",
+          axis.ticks.y=element_blank(),
+          axis.text.y=element_blank(),
+          panel.grid=element_blank()) +
+    labs(x = "", y = "") +
+    ggtitle(paste("distribution of", name[1], "over", name[2], "grouped by", name[3], sep=" ")) 
+
+p2/ p1 +
+  plot_layout(heights = c(1,12))
+```
+
+![](nb_figs/group_unnamed-chunk-15-1.png)<!-- -->
