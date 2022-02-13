@@ -1,7 +1,7 @@
 cleaning for template data
 ================
 Sascha Siegmund
-2022-02-10
+2022-02-13
 
 ## purpose of notebook
 
@@ -21,8 +21,7 @@ Sascha Siegmund
 library(tidyverse) # tidy data frame
 library(lubridate) # functions to work with date-times and time-spans
 library(janitor) # expedite the initial data exploration and cleaning that comes with any new data set
-library(plotly)
-
+library(patchwork) # separate ggplots into the same graphic
 library(readxl) # read_excel to read xslx dataset
 ```
 
@@ -306,7 +305,7 @@ duplicated_rows <- as_tibble(rownames(df_raw)) %>%
 
 # plot duplicated rows as black lines
 ggplot(duplicated_rows, aes(y = value, x = 1, fill = duplicated)) +
-  geom_tile() + # plot a black line for each constant column
+  geom_tile() + # plot a black line for each duplicated row
   ggtitle("row index of duplicated rows") + # add title
   theme_minimal() +
   scale_fill_grey(start=0.8, end=0.2,
@@ -331,7 +330,7 @@ tmp_df <- remove_constant(df_raw, na.rm = TRUE)
 constant_columns <- as_tibble(names(df_raw)) %>% 
   mutate(constant = value %in% setdiff(names(df_raw), names(tmp_df)))
 
-# plot duplicated rows as black lines
+# plot constant columns as black lines
 ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
   geom_tile() + # plot a black line for each constant column
   ggtitle("names of constant columns") + # add title
@@ -350,6 +349,138 @@ ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
 
 ![](nb_figs/clean_unnamed-chunk-8-1.png)<!-- -->
 
+## near zero variance columns
+
+-   
+
+``` r
+# get column name and info of near zero variance column
+nearZero_info <- caret::nearZeroVar(df_raw, freqCut = 95/5, uniqueCut = 10, saveMetrics = TRUE) %>%
+  rownames_to_column(var = "name")
+nearZero_info
+```
+
+    ##             name   freqRatio percentUnique zeroVar   nzv
+    ## 1             Id    1.000000   100.0000000   FALSE FALSE
+    ## 2     MSSubClass    1.792642     1.0273973   FALSE FALSE
+    ## 3       MSZoning    5.279817     0.3424658   FALSE FALSE
+    ## 4    LotFrontage    2.042857     7.5342466   FALSE FALSE
+    ## 5        LotArea    1.041667    73.4931507   FALSE FALSE
+    ## 6         Street  242.333333     0.1369863   FALSE  TRUE
+    ## 7          Alley    1.219512     0.1369863   FALSE FALSE
+    ## 8       LotShape    1.911157     0.2739726   FALSE FALSE
+    ## 9    LandContour   20.809524     0.2739726   FALSE  TRUE
+    ## 10     Utilities 1459.000000     0.1369863   FALSE  TRUE
+    ## 11     LotConfig    4.000000     0.3424658   FALSE FALSE
+    ## 12     LandSlope   21.261538     0.2054795   FALSE  TRUE
+    ## 13  Neighborhood    1.500000     1.7123288   FALSE FALSE
+    ## 14    Condition1   15.555556     0.6164384   FALSE FALSE
+    ## 15    Condition2  240.833333     0.5479452   FALSE  TRUE
+    ## 16      BldgType   10.701754     0.3424658   FALSE FALSE
+    ## 17    HouseStyle    1.631461     0.5479452   FALSE FALSE
+    ## 18   OverallQual    1.061497     0.6849315   FALSE FALSE
+    ## 19   OverallCond    3.257937     0.6164384   FALSE FALSE
+    ## 20     YearBuilt    1.046875     7.6712329   FALSE FALSE
+    ## 21  YearRemodAdd    1.835052     4.1780822   FALSE FALSE
+    ## 22     RoofStyle    3.989510     0.4109589   FALSE FALSE
+    ## 23      RoofMatl  130.363636     0.5479452   FALSE  TRUE
+    ## 24   Exterior1st    2.319820     1.0273973   FALSE FALSE
+    ## 25   Exterior2nd    2.355140     1.0958904   FALSE FALSE
+    ## 26    MasVnrType    1.941573     0.2739726   FALSE FALSE
+    ## 27    MasVnrArea  107.625000    22.3972603   FALSE FALSE
+    ## 28     ExterQual    1.856557     0.2739726   FALSE FALSE
+    ## 29     ExterCond    8.780822     0.3424658   FALSE FALSE
+    ## 30    Foundation    1.020505     0.4109589   FALSE FALSE
+    ## 31      BsmtQual    1.050162     0.2739726   FALSE FALSE
+    ## 32      BsmtCond   20.169231     0.2739726   FALSE  TRUE
+    ## 33  BsmtExposure    4.312217     0.2739726   FALSE FALSE
+    ## 34  BsmtFinType1    1.028708     0.4109589   FALSE FALSE
+    ## 35    BsmtFinSF1   38.916667    43.6301370   FALSE FALSE
+    ## 36  BsmtFinType2   23.259259     0.4109589   FALSE  TRUE
+    ## 37    BsmtFinSF2  258.600000     9.8630137   FALSE  TRUE
+    ## 38     BsmtUnfSF   13.111111    53.4246575   FALSE FALSE
+    ## 39   TotalBsmtSF    1.057143    49.3835616   FALSE FALSE
+    ## 40       Heating   79.333333     0.4109589   FALSE  TRUE
+    ## 41     HeatingQC    1.731308     0.3424658   FALSE FALSE
+    ## 42    CentralAir   14.368421     0.1369863   FALSE FALSE
+    ## 43    Electrical   14.191489     0.3424658   FALSE FALSE
+    ## 44      1stFlrSF    1.562500    51.5753425   FALSE FALSE
+    ## 45      2ndFlrSF   82.900000    28.5616438   FALSE FALSE
+    ## 46  LowQualFinSF  478.000000     1.6438356   FALSE  TRUE
+    ## 47     GrLivArea    1.571429    58.9726027   FALSE FALSE
+    ## 48  BsmtFullBath    1.455782     0.2739726   FALSE FALSE
+    ## 49  BsmtHalfBath   17.225000     0.2054795   FALSE FALSE
+    ## 50      FullBath    1.181538     0.2739726   FALSE FALSE
+    ## 51      HalfBath    1.706542     0.2054795   FALSE FALSE
+    ## 52  BedroomAbvGr    2.245810     0.5479452   FALSE FALSE
+    ## 53  KitchenAbvGr   21.415385     0.2739726   FALSE  TRUE
+    ## 54   KitchenQual    1.254266     0.2739726   FALSE FALSE
+    ## 55  TotRmsAbvGrd    1.221884     0.8219178   FALSE FALSE
+    ## 56    Functional   40.000000     0.4794521   FALSE  TRUE
+    ## 57    Fireplaces    1.061538     0.2739726   FALSE FALSE
+    ## 58   FireplaceQu    1.214058     0.3424658   FALSE FALSE
+    ## 59    GarageType    2.248062     0.4109589   FALSE FALSE
+    ## 60   GarageYrBlt    1.101695     6.6438356   FALSE FALSE
+    ## 61  GarageFinish    1.433649     0.2054795   FALSE FALSE
+    ## 62    GarageCars    2.233062     0.3424658   FALSE FALSE
+    ## 63    GarageArea    1.653061    30.2054795   FALSE FALSE
+    ## 64    GarageQual   27.312500     0.3424658   FALSE  TRUE
+    ## 65    GarageCond   37.885714     0.3424658   FALSE  TRUE
+    ## 66    PavedDrive   14.888889     0.2054795   FALSE FALSE
+    ## 67    WoodDeckSF   20.026316    18.7671233   FALSE FALSE
+    ## 68   OpenPorchSF   22.620690    13.8356164   FALSE FALSE
+    ## 69 EnclosedPorch   83.466667     8.2191781   FALSE  TRUE
+    ## 70     3SsnPorch  478.666667     1.3698630   FALSE  TRUE
+    ## 71   ScreenPorch  224.000000     5.2054795   FALSE  TRUE
+    ## 72      PoolArea 1453.000000     0.5479452   FALSE  TRUE
+    ## 73        PoolQC    1.500000     0.2054795   FALSE FALSE
+    ## 74         Fence    2.661017     0.2739726   FALSE FALSE
+    ## 75   MiscFeature   24.500000     0.2739726   FALSE  TRUE
+    ## 76       MiscVal  128.000000     1.4383562   FALSE  TRUE
+    ## 77        MoSold    1.081197     0.8219178   FALSE FALSE
+    ## 78        YrSold    1.027356     0.3424658   FALSE FALSE
+    ## 79      SaleType   10.385246     0.6164384   FALSE FALSE
+    ## 80 SaleCondition    9.584000     0.4109589   FALSE FALSE
+    ## 81     SalePrice    1.176471    45.4109589   FALSE FALSE
+
+``` r
+# plot near zero variance columns as black lines
+ggplot(nearZero_info, aes(y = name, x = 1, fill = nzv)) +
+  geom_tile() + # plot a black line for each near zero var column
+  ggtitle("names of near zero variance columns") + # add title
+  coord_flip() + # flip x and y axis
+  scale_x_reverse() + # reverse x axis
+  theme_minimal() +
+  scale_fill_grey(start=0.8, end=0.2,
+                  name = "",
+                  labels = c("ok", "near zero")) +
+  theme(axis.text.x = element_text(angle=45, vjust=0.7, size=10),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(y = "variables in dataset",
+       x = "")
+```
+
+![](nb_figs/clean_unnamed-chunk-9-1.png)<!-- -->
+
+``` r
+# plot infos from nearZeroVar
+p1 <- nearZero_info %>% ggplot(aes(x = freqRatio, fill = nzv)) +   geom_histogram(bins = 100) + 
+  theme_minimal() + theme(legend.position="none")
+p2 <- nearZero_info %>% ggplot(aes(x = percentUnique, fill = nzv)) + geom_histogram(bins = 100) + 
+  theme_minimal() + theme(legend.position="none")
+p3 <- nearZero_info %>% ggplot(aes(x = zeroVar)) + geom_bar() + 
+  theme_minimal() + theme(legend.position="none")
+p4 <- nearZero_info %>% ggplot(aes(x = nzv, fill = nzv)) + geom_bar() + 
+  theme_minimal() + theme(legend.position="none") + labs(x = "near zero variance")
+p5 <- nearZero_info %>% ggplot(aes(x = freqRatio, y = percentUnique, color = nzv)) + geom_point() + 
+  theme_minimal() + theme(legend.position="none")
+
+p5 / (p1 / p2 / (p3 | p4))
+```
+
+![](nb_figs/clean_unnamed-chunk-9-2.png)<!-- -->
+
 ## cleaning
 
 -   
@@ -358,6 +489,7 @@ ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
 # df <- df %>%
 #   clean_names() %>%  # clean column names
 #   distinct() %>%  # remove duplicated rows
+#   select(-which(nearZero_info$nzv)) %>% # remove near zero variance variables
 #   remove_empty() %>%  # removes empty rows and columns
 #   remove_constant(na.rm = TRUE) %>%  # removes constsant columns
 #   mutate(VarFactor = factor(VarFactor)) %>%  # categorical col as factor
@@ -373,7 +505,8 @@ ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
 #   filter(!((VarCategorical == 'Cat1')|
 #            (VarCategorical == 'Cat2')|
 #            (VarCategorical == 'Cat3'))) %>%  # remove specific categories
-#   filter(!(VarNumerical > 120000)) # remove outlying values
+#   filter(!(VarNumerical > 120000)) %>%  # remove outlying values
+#   select(-which(nearZero_info$nzv)) %>% # remove near zero variance variables
 ```
 
 ## additional variables

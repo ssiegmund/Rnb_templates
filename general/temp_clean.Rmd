@@ -36,8 +36,7 @@ knitr::opts_chunk$set(
 library(tidyverse) # tidy data frame
 library(lubridate) # functions to work with date-times and time-spans
 library(janitor) # expedite the initial data exploration and cleaning that comes with any new data set
-library(plotly)
-
+library(patchwork) # separate ggplots into the same graphic
 library(readxl) # read_excel to read xslx dataset
 ```
 
@@ -103,7 +102,7 @@ duplicated_rows <- as_tibble(rownames(df_raw)) %>%
 
 # plot duplicated rows as black lines
 ggplot(duplicated_rows, aes(y = value, x = 1, fill = duplicated)) +
-  geom_tile() + # plot a black line for each constant column
+  geom_tile() + # plot a black line for each duplicated row
   ggtitle("row index of duplicated rows") + # add title
   theme_minimal() +
   scale_fill_grey(start=0.8, end=0.2,
@@ -127,7 +126,7 @@ tmp_df <- remove_constant(df_raw, na.rm = TRUE)
 constant_columns <- as_tibble(names(df_raw)) %>% 
   mutate(constant = value %in% setdiff(names(df_raw), names(tmp_df)))
 
-# plot duplicated rows as black lines
+# plot constant columns as black lines
 ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
   geom_tile() + # plot a black line for each constant column
   ggtitle("names of constant columns") + # add title
@@ -145,6 +144,48 @@ ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
 ```
 
 
+## near zero variance columns
+
+- 
+
+```{r fig.width=14}
+# get column name and info of near zero variance column
+nearZero_info <- caret::nearZeroVar(df_raw, freqCut = 95/5, uniqueCut = 10, saveMetrics = TRUE) %>%
+  rownames_to_column(var = "name")
+nearZero_info
+
+# plot near zero variance columns as black lines
+ggplot(nearZero_info, aes(y = name, x = 1, fill = nzv)) +
+  geom_tile() + # plot a black line for each near zero var column
+  ggtitle("names of near zero variance columns") + # add title
+  coord_flip() + # flip x and y axis
+  scale_x_reverse() + # reverse x axis
+  theme_minimal() +
+  scale_fill_grey(start=0.8, end=0.2,
+                  name = "",
+                  labels = c("ok", "near zero")) +
+  theme(axis.text.x = element_text(angle=45, vjust=0.7, size=10),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(y = "variables in dataset",
+       x = "")
+
+# plot infos from nearZeroVar
+p1 <- nearZero_info %>% ggplot(aes(x = freqRatio, fill = nzv)) +   geom_histogram(bins = 100) + 
+  theme_minimal() + theme(legend.position="none")
+p2 <- nearZero_info %>% ggplot(aes(x = percentUnique, fill = nzv)) + geom_histogram(bins = 100) + 
+  theme_minimal() + theme(legend.position="none")
+p3 <- nearZero_info %>% ggplot(aes(x = zeroVar)) + geom_bar() + 
+  theme_minimal() + theme(legend.position="none")
+p4 <- nearZero_info %>% ggplot(aes(x = nzv, fill = nzv)) + geom_bar() + 
+  theme_minimal() + theme(legend.position="none") + labs(x = "near zero variance")
+p5 <- nearZero_info %>% ggplot(aes(x = freqRatio, y = percentUnique, color = nzv)) + geom_point() + 
+  theme_minimal() + theme(legend.position="none")
+
+p5 / (p1 / p2 / (p3 | p4))
+```
+
+
 ## cleaning
 
 - 
@@ -153,6 +194,7 @@ ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
 # df <- df %>%
 #   clean_names() %>%  # clean column names
 #   distinct() %>%  # remove duplicated rows
+#   select(-which(nearZero_info$nzv)) %>% # remove near zero variance variables
 #   remove_empty() %>%  # removes empty rows and columns
 #   remove_constant(na.rm = TRUE) %>%  # removes constsant columns
 #   mutate(VarFactor = factor(VarFactor)) %>%  # categorical col as factor
@@ -169,7 +211,8 @@ ggplot(constant_columns, aes(y = value, x = 1, fill = constant)) +
 #   filter(!((VarCategorical == 'Cat1')|
 #            (VarCategorical == 'Cat2')|
 #            (VarCategorical == 'Cat3'))) %>%  # remove specific categories
-#   filter(!(VarNumerical > 120000)) # remove outlying values
+#   filter(!(VarNumerical > 120000)) %>%  # remove outlying values
+#   select(-which(nearZero_info$nzv)) %>% # remove near zero variance variables
 ```
 
 
